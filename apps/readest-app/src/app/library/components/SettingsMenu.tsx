@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PiUserCircle, PiUserCircleCheck, PiGear } from 'react-icons/pi';
+import { PiGear } from 'react-icons/pi';
 import { PiSun, PiMoon } from 'react-icons/pi';
 import { TbSunMoon } from 'react-icons/tb';
 import { MdCloudSync, MdSync, MdSyncProblem } from 'react-icons/md';
@@ -10,10 +10,8 @@ import { isTauriAppPlatform, isWebAppPlatform } from '@/services/environment';
 import { DOWNLOAD_READEST_URL } from '@/services/constants';
 import { setBackupDialogVisible } from '@/app/library/components/BackupWindow';
 import { setCacheManagerDialogVisible } from '@/app/library/components/CacheManagerWindow';
-import { useAuth } from '@/context/AuthContext';
 import { useEnv } from '@/context/EnvContext';
 import { useThemeStore } from '@/store/themeStore';
-import { useQuotaStats } from '@/hooks/useQuotaStats';
 import { useFileSyncStore } from '@/store/fileSyncStore';
 import {
   getCloudSyncProvider,
@@ -23,9 +21,7 @@ import {
 import { useLibraryStore } from '@/store/libraryStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { useTransferQueue } from '@/hooks/useTransferQueue';
-import { navigateToLogin, navigateToProfile } from '@/utils/nav';
 import { tauriHandleSetAlwaysOnTop, tauriHandleToggleFullScreen } from '@/utils/window';
 import { setAboutDialogVisible } from '@/components/AboutWindow';
 import { setMigrateDataDirDialogVisible } from '@/app/library/components/MigrateDataWindow';
@@ -38,9 +34,7 @@ import {
 } from '@/services/biometric';
 import { selectDirectory } from '@/utils/bridge';
 import dayjs from 'dayjs';
-import UserAvatar from '@/components/UserAvatar';
 import MenuItem from '@/components/MenuItem';
-import Quota from '@/components/Quota';
 import Menu from '@/components/Menu';
 import { type AppLockDialogMode, useAppLockStore } from '@/store/appLockStore';
 
@@ -53,11 +47,8 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
   const _ = useTranslation();
   const router = useRouter();
   const { envConfig, appService } = useEnv();
-  const { user } = useAuth();
-  const { userProfilePlan, quotas } = useQuotaStats(true);
   const { themeMode, setThemeMode } = useThemeStore();
   const { settings, setSettingsDialogOpen } = useSettingsStore();
-  const [isAutoUpload, setIsAutoUpload] = useState(settings.autoUpload);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(settings.alwaysOnTop);
   const [isAlwaysShowStatusBar, setIsAlwaysShowStatusBar] = useState(settings.alwaysShowStatusBar);
   const [isOpenLastBooks, setIsOpenLastBooks] = useState(settings.openLastBooks);
@@ -67,7 +58,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
   const [savedBookCoverForLockScreen, setSavedBookCoverForLockScreen] = useState(
     settings.savedBookCoverForLockScreen || '',
   );
-  const iconSize = useResponsiveSize(16);
 
   const [isRefreshingMetadata, setIsRefreshingMetadata] = useState(false);
   const [refreshMetadataProgress, setRefreshMetadataProgress] = useState('');
@@ -118,16 +108,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
     setIsDropdownOpen?.(false);
   };
 
-  const handleUserLogin = () => {
-    navigateToLogin(router);
-    setIsDropdownOpen?.(false);
-  };
-
-  const handleUserProfile = () => {
-    navigateToProfile(router);
-    setIsDropdownOpen?.(false);
-  };
-
   const handleManageSync = () => {
     router.push('/user?section=sync');
     setIsDropdownOpen?.(false);
@@ -162,16 +142,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
     setIsAlwaysShowStatusBar(newValue);
   };
 
-  const toggleAutoUploadBooks = () => {
-    const newValue = !settings.autoUpload;
-    saveSysSettings(envConfig, 'autoUpload', newValue);
-    setIsAutoUpload(newValue);
-
-    if (newValue && !user) {
-      navigateToLogin(router);
-    }
-  };
-
   const toggleAutoImportBooksOnOpen = () => {
     const newValue = !settings.autoImportBooksOnOpen;
     saveSysSettings(envConfig, 'autoImportBooksOnOpen', newValue);
@@ -182,11 +152,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
     const newValue = !settings.openLastBooks;
     saveSysSettings(envConfig, 'openLastBooks', newValue);
     setIsOpenLastBooks(newValue);
-  };
-
-  const handleUpgrade = () => {
-    navigateToProfile(router);
-    setIsDropdownOpen?.(false);
   };
 
   const handleSetRootDir = () => {
@@ -264,9 +229,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
     setIsDropdownOpen?.(false);
   };
 
-  const avatarUrl = user?.user_metadata?.['picture'] || user?.user_metadata?.['avatar_url'];
-  const userFullName = user?.user_metadata?.['full_name'];
-  const userDisplayName = userFullName ? userFullName.split(' ')[0] : null;
   const themeModeLabel =
     themeMode === 'dark'
       ? _('Dark Mode')
@@ -287,25 +249,18 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
   const providerSyncing = cloudProvider !== 'readest' && !!fileSyncByKind[cloudProvider]?.isSyncing;
   const providerLastError =
     cloudProvider !== 'readest' ? fileSyncLastError[cloudProvider] : undefined;
-  const lastSyncTime =
-    cloudProvider !== 'readest'
-      ? settings[settingsKeyForBackend(cloudProvider)]?.lastSyncedAt || 0
-      : Math.max(
-          settings.lastSyncedAtBooks || 0,
-          settings.lastSyncedAtConfigs || 0,
-          settings.lastSyncedAtNotes || 0,
-        );
-  const syncRowLabel =
-    cloudProvider !== 'readest'
-      ? providerLastError
-        ? _('Sync failed')
-        : lastSyncTime
-          ? _('Synced {{time}}', {
-              time: dayjs(lastSyncTime).fromNow(),
-            })
-          : _('Never synced')
+  const hasSelectedLibrarySyncProvider = cloudProvider !== 'readest';
+  const lastSyncTime = hasSelectedLibrarySyncProvider
+    ? settings[settingsKeyForBackend(cloudProvider)]?.lastSyncedAt || 0
+    : 0;
+  const syncRowLabel = !hasSelectedLibrarySyncProvider
+    ? _('No library sync provider selected')
+    : providerLastError
+      ? _('Sync failed')
       : lastSyncTime
-        ? _('Synced {{time}}', { time: dayjs(lastSyncTime).fromNow() })
+        ? _('Synced {{time}}', {
+            time: dayjs(lastSyncTime).fromNow(),
+          })
         : _('Never synced');
 
   return (
@@ -316,78 +271,44 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
       )}
       onCancel={() => setIsDropdownOpen?.(false)}
     >
-      {user ? (
-        <MenuItem
-          label={
-            userDisplayName
-              ? _('Logged in as {{userDisplayName}}', { userDisplayName })
-              : _('Logged in')
-          }
-          labelClass='!max-w-40'
-          aria-label={_('View account details and quota')}
-          Icon={
-            avatarUrl ? (
-              <UserAvatar url={avatarUrl} size={iconSize} DefaultIcon={PiUserCircleCheck} />
-            ) : (
-              PiUserCircleCheck
-            )
-          }
-        >
-          <ul className='ms-0 flex flex-col ps-0 before:hidden'>
-            <MenuItem
-              label={_('Cloud File Transfers')}
-              Icon={MdCloudSync}
-              description={
-                hasActiveTransfers
-                  ? _('{{activeCount}} active, {{pendingCount}} pending', {
-                      activeCount: stats.active,
-                      pendingCount: stats.pending,
-                    })
-                  : stats.failed > 0
-                    ? _('{{failedCount}} failed', { failedCount: stats.failed })
-                    : ''
-              }
-              onClick={openTransferQueue}
-            />
-            <MenuItem
-              label={syncRowLabel}
-              Icon={user ? MdSync : MdSyncProblem}
-              labelClass='ps-2 pe-1 !mx-0'
-              iconClassName={(user && isSyncing) || providerSyncing ? 'animate-reverse-spin' : ''}
-              onClick={handleSyncLibrary}
-              description={
-                cloudProvider !== 'readest'
-                  ? _('Library sync via {{provider}}', {
-                      provider: cloudProviderName,
-                    })
-                  : undefined
-              }
-            />
-            {cloudProvider === 'readest' ? (
-              <button
-                onClick={handleUserProfile}
-                className='hover:bg-base-300 w-full rounded-md'
-                style={{
-                  paddingInlineStart: `${iconSize}px`,
-                }}
-              >
-                <Quota quotas={quotas} labelClassName='h-10 pl-3 pr-2' />
-              </button>
-            ) : null}
-            <MenuItem label={_('Account')} onClick={handleUserProfile} />
-          </ul>
-        </MenuItem>
-      ) : (
-        <MenuItem label={_('Sign In')} Icon={PiUserCircle} onClick={handleUserLogin}></MenuItem>
-      )}
-
-      {cloudProvider === 'readest' && (
-        <MenuItem
-          label={_('Auto Upload Books to Cloud')}
-          toggled={isAutoUpload}
-          onClick={toggleAutoUploadBooks}
-        />
-      )}
+      <MenuItem
+        label={_('Cloud File Transfers')}
+        Icon={MdCloudSync}
+        description={
+          hasActiveTransfers
+            ? _('{{activeCount}} active, {{pendingCount}} pending', {
+                activeCount: stats.active,
+                pendingCount: stats.pending,
+              })
+            : stats.failed > 0
+              ? _('{{failedCount}} failed', { failedCount: stats.failed })
+              : ''
+        }
+        onClick={openTransferQueue}
+      />
+      <MenuItem
+        label={syncRowLabel}
+        Icon={providerLastError ? MdSyncProblem : MdSync}
+        iconClassName={
+          (isSyncing || providerSyncing) && hasSelectedLibrarySyncProvider
+            ? 'animate-reverse-spin'
+            : ''
+        }
+        onClick={hasSelectedLibrarySyncProvider ? handleSyncLibrary : handleManageSync}
+        description={
+          hasSelectedLibrarySyncProvider
+            ? _('Library sync via {{provider}}', {
+                provider: cloudProviderName,
+              })
+            : _('Configure WebDAV, Google Drive, or S3 in Services & Sync')
+        }
+      />
+      <MenuItem
+        label={_('Services & Sync')}
+        Icon={PiGear}
+        description={_('Manage sync categories and local service setup')}
+        onClick={handleManageSync}
+      />
 
       {isTauriAppPlatform() && (
         <MenuItem
@@ -435,7 +356,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
           {appService?.canCustomizeRootDir && (
             <MenuItem label={_('Change Data Location')} onClick={handleSetRootDir} />
           )}
-          {user && <MenuItem label={_('Data Sync')} onClick={handleManageSync} />}
           <MenuItem
             label={_('Refresh Metadata')}
             description={refreshMetadataProgress}
@@ -481,9 +401,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
         </ul>
       </MenuItem>
       <hr aria-hidden='true' className='border-base-200 my-1' />
-      {user && userProfilePlan === 'free' && (
-        <MenuItem label={_('Upgrade to Readest Premium')} onClick={handleUpgrade} />
-      )}
       {isWebAppPlatform() && <MenuItem label={_('Download Readest')} onClick={downloadReadest} />}
       <MenuItem label={_('About Readest')} onClick={showAboutReadest} />
     </Menu>

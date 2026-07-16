@@ -238,10 +238,11 @@ the adapters under `src/services/annotation`, `src/services/nav`,
 features (annotations sync, navigation, content transforms, vertical/Warichu
 support, classic mode overlays, etc.).
 
-PDF rendering goes through `pdfjs-dist`, which is copied into
-`public/vendor/pdfjs` at build time (`pnpm setup-pdfjs`). Chinese conversion
-uses `simplecc-wasm` (`public/vendor/simplecc`), and Chinese segmentation uses
-`jieba-wasm` (`public/vendor/jieba`).
+PDF rendering goes through `pdfjs-dist`, which is staged into
+`public/vendor/pdfjs` during install and via `node scripts/setup-vendors.mjs`.
+Chinese conversion uses `simplecc-wasm` (`public/vendor/simplecc`), and Chinese
+segmentation uses `jieba-wasm` (`public/vendor/jieba`) via the same staging
+step.
 
 ### 3.4 Service worker and offline
 
@@ -440,7 +441,10 @@ roundtrip.
 `src/services/opds` parses feeds, supports auto-download, and tracks
 subscription state. Cross-origin feeds are tunneled through
 `src/app/api/opds/proxy`. The library UI surfaces OPDS shelves alongside local
-books.
+books. For this workspace, Calibre integration is expected to use Calibre
+Content Server or Calibre-Web over standard OPDS root URLs such as `/opds` or
+`/opds/index.xml`, including normal OPDS navigation feeds, OpenSearch links,
+pagination, acquisition links, and Basic Auth where configured.
 
 ### 6.8 Third-party reading services
 

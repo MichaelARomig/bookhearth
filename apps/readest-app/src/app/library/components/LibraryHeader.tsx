@@ -27,6 +27,7 @@ interface LibraryHeaderProps {
   isSelectAll: boolean;
   onPullLibrary: () => void;
   onImportBooksFromFiles: () => void;
+  onImportIntoCollection: () => void;
   onImportBooksFromDirectory?: () => void;
   onImportBookFromUrl?: () => void;
   onOpenCatalogManager: () => void;
@@ -40,6 +41,7 @@ const LibraryHeader: React.FC<LibraryHeaderProps> = ({
   isSelectAll,
   onPullLibrary,
   onImportBooksFromFiles,
+  onImportIntoCollection,
   onImportBooksFromDirectory,
   onImportBookFromUrl,
   onOpenCatalogManager,
@@ -91,8 +93,6 @@ const LibraryHeader: React.FC<LibraryHeaderProps> = ({
   );
 
   if (!insets) return null;
-
-  const isMobile = appService?.isMobile || window.innerWidth <= 640;
 
   return (
     <div
@@ -160,25 +160,24 @@ const LibraryHeader: React.FC<LibraryHeaderProps> = ({
             >
               <ImportMenu
                 onImportBooksFromFiles={onImportBooksFromFiles}
+                onImportIntoCollection={onImportIntoCollection}
                 onImportBooksFromDirectory={onImportBooksFromDirectory}
                 onImportBookFromUrl={onImportBookFromUrl}
                 onOpenCatalogManager={onOpenCatalogManager}
               />
             </Dropdown>
-            {isMobile ? null : (
-              <button
-                onClick={onToggleSelectMode}
-                aria-label={_('Select Books')}
-                title={_('Select Books')}
-                className='h-6'
-              >
-                {isSelectMode ? (
-                  <PiSelectionAllFill role='button' className='text-base-content/60 h-6 w-6' />
-                ) : (
-                  <PiSelectionAll role='button' className='text-base-content/60 h-6 w-6' />
-                )}
-              </button>
-            )}
+            <button
+              onClick={onToggleSelectMode}
+              aria-label={_('Select Books')}
+              title={_('Select Books')}
+              className='h-6'
+            >
+              {isSelectMode ? (
+                <PiSelectionAllFill role='button' className='text-base-content/60 h-6 w-6' />
+              ) : (
+                <PiSelectionAll role='button' className='text-base-content/60 h-6 w-6' />
+              )}
+            </button>
           </div>
         </div>
         {isSelectMode ? (

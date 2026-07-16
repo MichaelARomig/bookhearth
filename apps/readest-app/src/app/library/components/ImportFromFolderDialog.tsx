@@ -444,9 +444,9 @@ const ImportFromFolderDialog: React.FC<ImportFromFolderDialogProps> = ({
               onChange={() => setFolderMode('keep')}
             />
             <span className='select-none'>
-              <span className='block'>{_('Create groups from subfolders')}</span>
+              <span className='block'>{_('Create collections from subfolders')}</span>
               <span className='text-base-content/60 block text-xs'>
-                {_('Each first-level subfolder becomes a library group.')}
+                {_('Each first-level subfolder becomes a library collection.')}
               </span>
             </span>
           </label>

@@ -283,13 +283,10 @@ for (const sub of ['schemas', 'android/keystore.properties']) {
   }
 }
 
-// Copy public/vendor to the new worktree (built assets not in git)
-const srcVendor = path.join(srcAppDir, 'public', 'vendor');
-const dstVendor = path.join(dstAppDir, 'public', 'vendor');
-if (fs.existsSync(srcVendor) && !fs.existsSync(dstVendor)) {
-  console.error('\n--- Copying public/vendor ---');
-  fs.cpSync(srcVendor, dstVendor, { recursive: true });
-}
+// Stage public/vendor from the worktree's own dependency outputs so a fresh
+// checkout does not rely on a previously-built source tree.
+console.error('\n--- Staging public/vendor ---');
+execSync('node scripts/setup-vendors.mjs', { stdio: gitStdio, cwd: dstAppDir });
 
 // Print path to stdout -- allows: cd $(pnpm worktree:new <arg>)
 process.stdout.write(worktreePath + '\n');

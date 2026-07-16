@@ -81,16 +81,7 @@
       "identifier": "http:default",
       "allow": [
         {
-          "url": "https://*.readest.com"
-        },
-        {
           "url": "https://github.com/readest/*"
-        },
-        {
-          "url": "https://*.deepl.com"
-        },
-        {
-          "url": "https://*.cloudflarestorage.com"
         },
         {
           "url": "https://edge.microsoft.com"
@@ -188,7 +179,6 @@
     "device-info:default",
     "turso:default",
     "native-tts:default",
-    "native-bridge:default",
-    "sentry:default"
+    "native-bridge:default"
   ]
 }

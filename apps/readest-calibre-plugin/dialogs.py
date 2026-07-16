@@ -44,7 +44,7 @@ class _OAuthWaiter(QThread):
 
 
 class LoginDialog(QDialog):
-    """Email/password login plus browser OAuth (Google, Apple, GitHub, Discord)."""
+    """Email/password login plus browser OAuth against the configured server."""
 
     def __init__(self, parent, client):
         QDialog.__init__(self, parent)
@@ -53,7 +53,7 @@ class LoginDialog(QDialog):
         self.oauth_server = None
         self.oauth_waiter = None
 
-        self.setWindowTitle('Log in to Readest')
+        self.setWindowTitle('Log in to Readest Server')
         layout = QVBoxLayout()
         self.setLayout(layout)
 
@@ -104,7 +104,12 @@ class LoginDialog(QDialog):
     def oauth_login(self, provider):
         self.stop_oauth()
         self.oauth_server = OAuthCallbackServer()
-        port = self.oauth_server.start()
+        try:
+            port = self.oauth_server.start()
+        except OSError as err:
+            self.oauth_server = None
+            self.status_label.setText('Could not start the browser callback server: %s' % err)
+            return
         self.oauth_waiter = _OAuthWaiter(self, self.oauth_server)
         self.oauth_waiter.got_tokens.connect(self.oauth_finished)
         self.oauth_waiter.timed_out.connect(

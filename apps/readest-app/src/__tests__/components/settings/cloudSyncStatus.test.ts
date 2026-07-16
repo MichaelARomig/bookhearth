@@ -52,7 +52,7 @@ describe('getThirdPartyRowStatus', () => {
   test('paused outranks syncing, errors, and warnings', () => {
     expect(
       getThirdPartyRowStatus(_, { ...base, paused: true, syncing: true, lastError: 'x' }),
-    ).toBe('Paused — plan required');
+    ).toBe('Paused');
   });
 
   test('syncing while a run is in flight', () => {

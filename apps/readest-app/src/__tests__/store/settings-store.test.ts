@@ -44,7 +44,6 @@ function makeSettings(overrides: Partial<SystemSettings> = {}): SystemSettings {
     savedBookCoverForLockScreen: '',
     savedBookCoverForLockScreenPath: '',
     telemetryEnabled: false,
-    discordRichPresenceEnabled: false,
     libraryViewMode: 'grid',
     librarySortBy: 'updated',
     librarySortAscending: false,

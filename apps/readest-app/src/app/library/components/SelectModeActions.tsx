@@ -88,7 +88,7 @@ const SelectModeActions: React.FC<SelectModeActionsProps> = ({
           )}
         >
           <LuFolderPlus />
-          <div>{_('Group')}</div>
+          <div>{_('Collection')}</div>
         </button>
         <button
           onClick={onStatus}

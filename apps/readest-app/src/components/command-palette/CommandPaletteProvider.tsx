@@ -9,7 +9,6 @@ import { isTauriAppPlatform } from '@/services/environment';
 import { tauriHandleSetAlwaysOnTop, tauriHandleToggleFullScreen } from '@/utils/window';
 import { setAboutDialogVisible } from '@/components/AboutWindow';
 import { saveSysSettings } from '@/helpers/settings';
-import { isReadestCloudStorageActive } from '@/services/sync/cloudSyncProvider';
 import { SettingsPanelType } from '@/components/settings/SettingsDialog';
 import {
   CommandItem,
@@ -100,11 +99,6 @@ export const CommandPaletteProvider: React.FC<CommandPaletteProviderProps> = ({ 
     setAboutDialogVisible(true);
   }, []);
 
-  const toggleTelemetry = useCallback(() => {
-    const newValue = !settings.telemetryEnabled;
-    saveSysSettings(envConfig, 'telemetryEnabled', newValue);
-  }, [envConfig, settings.telemetryEnabled]);
-
   const openSettingsPanel = useCallback(
     (_panel: SettingsPanelType, itemId?: string) => {
       // panel is encoded in itemId (e.g., 'settings.font.defaultFontSize')
@@ -116,10 +110,6 @@ export const CommandPaletteProvider: React.FC<CommandPaletteProviderProps> = ({ 
     },
     [setSettingsDialogOpen, setActiveSettingsItemId],
   );
-
-  // Auto-upload targets Readest Cloud storage, which is not written to while
-  // a third-party provider is selected — hide the toggle then.
-  const readestStorageActive = isReadestCloudStorageActive(settings);
 
   // build command registry
   const commandItems = useMemo(
@@ -135,14 +125,12 @@ export const CommandPaletteProvider: React.FC<CommandPaletteProviderProps> = ({ 
         reloadPage,
         toggleOpenLastBooks,
         showAbout,
-        toggleTelemetry,
         isDesktop,
       });
-      return readestStorageActive ? items : items.filter((i) => i.id !== 'action.autoUpload');
+      return items.filter((i) => i.id !== 'action.autoUpload');
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      readestStorageActive,
       _,
       openSettingsPanel,
       toggleTheme,
@@ -153,7 +141,6 @@ export const CommandPaletteProvider: React.FC<CommandPaletteProviderProps> = ({ 
       reloadPage,
       toggleOpenLastBooks,
       showAbout,
-      toggleTelemetry,
       isDesktop,
     ],
   );

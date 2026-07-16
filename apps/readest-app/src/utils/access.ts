@@ -1,5 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
-import { supabase } from '@/utils/supabase';
+import { isSupabaseConfigured, supabase } from '@/utils/supabase';
 import { UserPlan } from '@/types/quota';
 import { DEFAULT_DAILY_TRANSLATION_QUOTA, DEFAULT_STORAGE_QUOTA } from '@/services/constants';
 import { isWebAppPlatform } from '@/services/environment';
@@ -46,10 +46,8 @@ export const isEmailInPlan = (plan: UserPlan): boolean =>
   (EMAIL_IN_PLANS as readonly UserPlan[]).includes(plan);
 
 /**
- * Plans that include third-party cloud sync (WebDAV / Google Drive): any paid
- * plan — Plus, Pro, and Lifetime (`purchase`). Free users see an upgrade prompt
- * in Settings and the reader's auto-sync stays off, so syncing to a personal
- * cloud is a premium feature.
+ * Historical plan list for third-party cloud sync. The local-first build now
+ * bypasses this gate via {@link CLOUD_SYNC_REQUIRES_PREMIUM} = false.
  */
 export const CLOUD_SYNC_PLANS: readonly UserPlan[] = ['plus', 'pro', 'purchase'];
 
@@ -57,15 +55,16 @@ export const isCloudSyncInPlan = (plan: UserPlan): boolean =>
   (CLOUD_SYNC_PLANS as readonly UserPlan[]).includes(plan);
 
 /**
- * Master switch for the third-party cloud-sync premium paywall. ON: cloud
- * sync (WebDAV / Google Drive / S3) requires a {@link CLOUD_SYNC_PLANS} plan —
- * free users see the provider rows with a Premium badge and an upgrade route
- * instead of the config sub-pages, and a downgraded account's still-selected
- * provider is paused (never a silent fallback to Readest Cloud uploads, #4959).
- * Every gate goes through {@link isCloudSyncAllowed}, so this flag is the
- * whole toggle.
+ * Local-first build policy: self-hosted / user-controlled cloud sync backends
+ * are always available and never paywalled.
  */
-export const CLOUD_SYNC_REQUIRES_PREMIUM = true;
+export const CLOUD_SYNC_REQUIRES_PREMIUM = false;
+
+/**
+ * Local-first: the app does not enforce translation usage caps. Provider-side
+ * limits (LiteLLM / upstream) remain outside this client.
+ */
+export const TRANSLATION_QUOTA_UNLIMITED = true;
 
 /**
  * Whether third-party cloud sync is available for a plan. Falls back to the
@@ -78,6 +77,10 @@ export const isCloudSyncAllowed = (plan: UserPlan): boolean =>
 export const STORAGE_QUOTA_GRACE_BYTES = 10 * 1024 * 1024; // 10 MB grace
 
 export const getStoragePlanData = (token: string) => {
+  if (!token) {
+    // Unauthenticated local-first: no official cloud storage pool.
+    return { plan: 'free' as UserPlan, usage: 0, quota: Number.MAX_SAFE_INTEGER };
+  }
   const data = jwtDecode<Token>(token) || {};
   const plan = data['plan'] || 'free';
   const usage = data['storage_usage_bytes'] || 0;
@@ -96,6 +99,7 @@ export const getStoragePlanData = (token: string) => {
 };
 
 export const getTranslationQuota = (plan: UserPlan): number => {
+  if (TRANSLATION_QUOTA_UNLIMITED) return Number.MAX_SAFE_INTEGER;
   const runtimeConfig = getRuntimeConfig();
   const fixedQuota =
     runtimeConfig?.translationFixedQuota ?? parseInt(process.env['TRANSLATION_FIXED_QUOTA'] ?? '0');
@@ -135,6 +139,7 @@ export const getAccessToken = async (): Promise<string | null> => {
   if (isWebAppPlatform()) {
     return localStorage.getItem('token') ?? null;
   }
+  if (!isSupabaseConfigured()) return null;
   const { data } = await supabase.auth.getSession();
   return data?.session?.access_token ?? null;
 };
@@ -144,12 +149,13 @@ export const getUserID = async (): Promise<string | null> => {
     const user = localStorage.getItem('user') ?? '{}';
     return JSON.parse(user).id ?? null;
   }
+  if (!isSupabaseConfigured()) return null;
   const { data } = await supabase.auth.getSession();
   return data?.session?.user?.id ?? null;
 };
 
 export const validateUserAndToken = async (authHeader: string | null | undefined) => {
-  if (!authHeader) return {};
+  if (!authHeader || !isSupabaseConfigured()) return {};
 
   const token = authHeader.replace('Bearer ', '');
   const {

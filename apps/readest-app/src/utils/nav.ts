@@ -107,10 +107,7 @@ export const navigateToReader = (
 };
 
 export const navigateToLogin = (router: ReturnType<typeof useRouter>) => {
-  const pathname = window.location.pathname;
-  const search = window.location.search;
-  const currentPath = pathname !== '/auth' ? pathname + search : '/';
-  router.push(`/auth?redirect=${encodeURIComponent(currentPath)}`);
+  router.push('/user');
 };
 
 export const navigateToProfile = (router: ReturnType<typeof useRouter>) => {
@@ -158,15 +155,9 @@ export const redirectToLibrary = () => {
 };
 
 export const navigateToResetPassword = (router: ReturnType<typeof useRouter>) => {
-  const pathname = window.location.pathname;
-  const search = window.location.search;
-  const currentPath = pathname !== '/auth' ? pathname + search : '/';
-  router.push(`/auth/recovery?redirect=${encodeURIComponent(currentPath)}`);
+  router.push('/user');
 };
 
 export const navigateToUpdatePassword = (router: ReturnType<typeof useRouter>) => {
-  const pathname = window.location.pathname;
-  const search = window.location.search;
-  const currentPath = pathname !== '/auth' ? pathname + search : '/';
-  router.push(`/auth/update?redirect=${encodeURIComponent(currentPath)}`);
+  router.push('/user');
 };

@@ -1,7 +1,11 @@
 # Readest calibre plugin
 
+Status for this local-first workspace: the planned Calibre integration path is
+standard Calibre Content Server / Calibre-Web OPDS inside the app, not this
+custom push plugin.
+
 A [calibre](https://calibre-ebook.com) GUI plugin that pushes selected books —
-with their metadata — into your [Readest](https://readest.com) cloud library.
+with their metadata — into a configured Readest-compatible library server.
 Re-pushing a book updates its existing entry instead of creating a duplicate,
 so you can edit metadata in calibre and re-send it any time.
 
@@ -25,9 +29,12 @@ Implements [readest/readest#4863](https://github.com/readest/readest/issues/4863
   are preserved.
 - **Per-book status report**: uploaded / updated / up to date / failed, with a
   storage-quota check (the push stops cleanly when your quota is exhausted).
+- **Explicit server configuration**: configure the API server, auth server,
+  and public anon key for your deployment. The plugin ships without built-in
+  official Readest cloud defaults.
 - **Login like the apps**: email + password, or browser sign-in with Google,
-  Apple, GitHub or Discord (OAuth via a temporary localhost callback, the same
-  flow the desktop app uses).
+  Apple, GitHub or Discord against your configured auth server (OAuth via a
+  temporary localhost callback, the same flow the desktop app uses).
 
 ## Install
 
@@ -49,9 +56,11 @@ version committed in git is a development placeholder.
 
 ## Usage
 
-1. Click the *Readest* toolbar button menu → *Log in to Readest…*
-2. Select the books to push (any number).
-3. Click the *Readest* button (or menu → *Push selected books to Readest*).
+1. Open *Preferences -> Plugins -> Readest -> Customize plugin...* and enter
+   the API server, auth server, and public anon key for your deployment.
+2. Click the *Readest* toolbar button menu -> *Log in to Readest...*
+3. Select the books to push (any number).
+4. Click the *Readest* button (or menu -> *Push selected books to Readest*).
 
 For each book the best Readest-supported format is pushed, preferring
 `EPUB > PDF > AZW3 > MOBI > AZW > FB2 > FBZ > CBZ > TXT > MD`.
@@ -93,6 +102,7 @@ dependencies and are covered by unit tests:
 make test    # python3 -m unittest discover -s tests
 ```
 
-The wire protocol mirrors what the Readest apps and `readest.koplugin` use:
-Supabase auth (`/auth/v1`), `GET/POST /api/sync` for library rows, and
-`POST /api/storage/upload` + presigned PUT for file blobs.
+The current wire protocol mirrors what the Readest apps and
+`readest.koplugin` use: Supabase-compatible auth (`/auth/v1`),
+`GET/POST /api/sync` for library rows, and `POST /api/storage/upload` +
+presigned PUT for file blobs.

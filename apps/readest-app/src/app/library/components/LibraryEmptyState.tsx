@@ -3,21 +3,24 @@ import clsx from 'clsx';
 import { PiBooks } from 'react-icons/pi';
 
 import { useEnv } from '@/context/EnvContext';
-import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/hooks/useTranslation';
-import { useAppRouter } from '@/hooks/useAppRouter';
-import { navigateToLogin } from '@/utils/nav';
+import { getCatalogUiLabel } from '@/app/opds/utils/catalogUi';
 
 interface LibraryEmptyStateProps {
   onImport: () => void;
+  onImportIntoCollection: () => void;
+  onOpenCatalogManager: () => void;
 }
 
-const LibraryEmptyState: React.FC<LibraryEmptyStateProps> = ({ onImport }) => {
+const LibraryEmptyState: React.FC<LibraryEmptyStateProps> = ({
+  onImport,
+  onImportIntoCollection,
+  onOpenCatalogManager,
+}) => {
   const _ = useTranslation();
   const { appService } = useEnv();
-  const { user } = useAuth();
-  const router = useAppRouter();
   const isMobile = appService?.isMobile ?? false;
+  const catalogLabel = getCatalogUiLabel(_, appService?.isOnlineCatalogsAccessible);
 
   return (
     <div className='hero-content text-neutral-content text-center'>
@@ -39,21 +42,23 @@ const LibraryEmptyState: React.FC<LibraryEmptyStateProps> = ({ onImport }) => {
           >
             {_('Import Books')}
           </button>
-          {/* TODO: add a 'Browse free catalogs' secondary action that opens the
-              OPDS dialog (handleShowOPDSDialog) once we settle on placement. */}
-          {!user && (
-            <button
-              type='button'
-              className={clsx(
-                'text-base-content/70 hover:text-base-content mt-1 py-2 text-sm font-medium',
-                'underline underline-offset-4',
-                'focus-visible:text-base-content focus-visible:outline-none',
-              )}
-              onClick={() => navigateToLogin(router)}
-            >
-              {_('Sign in to sync your library')}
-            </button>
-          )}
+          <button
+            type='button'
+            className='btn btn-outline h-11 min-h-11 rounded-lg'
+            onClick={onImportIntoCollection}
+          >
+            {_('Import into Collection')}
+          </button>
+          <button
+            type='button'
+            className={clsx(
+              'text-base-content/75 hover:text-base-content rounded-lg py-2 text-sm font-medium',
+              'focus-visible:text-base-content focus-visible:outline-none',
+            )}
+            onClick={onOpenCatalogManager}
+          >
+            {catalogLabel}
+          </button>
         </div>
       </div>
     </div>

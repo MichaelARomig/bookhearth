@@ -1,14 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-vi.mock('posthog-js', () => ({
-  default: {
-    capture: vi.fn(),
-    opt_in_capturing: vi.fn(),
-    opt_out_capturing: vi.fn(),
-  },
-}));
-
-import posthog from 'posthog-js';
 import {
   getTelemetryDecision,
   hasOptedOutTelemetry,
@@ -49,23 +39,20 @@ describe('telemetry decision storage', () => {
 describe('optInTelemetry / optOutTelemetry', () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.clearAllMocks();
   });
 
-  it('opt-in records opt-in decision, clears opt-out flag, and calls posthog', () => {
+  it('opt-in records opt-in decision and clears the opt-out flag', () => {
     optInTelemetry();
     expect(localStorage.getItem(TELEMETRY_OPT_OUT_KEY)).toBe('false');
     expect(getTelemetryDecision()).toBe('opt-in');
     expect(hasOptedOutTelemetry()).toBe(false);
-    expect(posthog.opt_in_capturing).toHaveBeenCalledOnce();
   });
 
-  it('opt-out records opt-out decision, sets opt-out flag, and calls posthog', () => {
+  it('opt-out records opt-out decision and sets the opt-out flag', () => {
     optOutTelemetry();
     expect(localStorage.getItem(TELEMETRY_OPT_OUT_KEY)).toBe('true');
     expect(getTelemetryDecision()).toBe('opt-out');
     expect(hasOptedOutTelemetry()).toBe(true);
-    expect(posthog.opt_out_capturing).toHaveBeenCalledOnce();
   });
 });
 

@@ -28,6 +28,7 @@ import {
   WebDAVSettings,
   GoogleDriveSettings,
   S3Settings,
+  LiteLLMSettings,
 } from '@/types/settings';
 import { UserStorageQuota, UserDailyTranslationQuota } from '@/types/quota';
 import { getDefaultMaxBlockSize, getDefaultMaxInlineSize } from '@/utils/config';
@@ -65,7 +66,9 @@ export const SUPPORTED_IMAGE_EXTS = ['png', 'jpg', 'jpeg'];
 export const IMAGE_ACCEPT_FORMATS = SUPPORTED_IMAGE_EXTS.map((ext) => `.${ext}`).join(', ');
 
 export const DEFAULT_KOSYNC_SETTINGS = {
-  serverUrl: 'https://sync.koreader.rocks/', // https://kosync.ak-team.com:3042/
+  // Self-hosted sync is opt-in for this local-first integration build; do not
+  // prefill a public server.
+  serverUrl: '',
   username: '',
   userkey: '',
   deviceId: '',
@@ -129,9 +132,23 @@ export const DEFAULT_S3_SETTINGS = {
   lastSyncedAt: 0,
 } as S3Settings;
 
+export const DEFAULT_LITELLM_SETTINGS = {
+  // AI features are opt-in for this local-first build; the user configures
+  // their own OpenAI-compatible LiteLLM endpoint before TTS/translation route
+  // to it. No public endpoint is prefilled.
+  enabled: false,
+  baseUrl: '',
+  apiKey: '',
+  customHeaders: {},
+  ttsModel: 'tts-1',
+  ttsVoice: 'alloy',
+  translationModel: 'gpt-4o-mini',
+  timeoutMs: 30000,
+} as LiteLLMSettings;
+
 export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   keepLogin: false,
-  autoUpload: true,
+  autoUpload: false,
   alwaysOnTop: false,
   openBookInNewWindow: true,
   alwaysShowStatusBar: false,
@@ -154,8 +171,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   openLastBooks: false,
   lastOpenBooks: [],
   autoImportBooksOnOpen: false,
-  telemetryEnabled: true,
-  discordRichPresenceEnabled: false,
+  telemetryEnabled: false,
   libraryViewMode: 'grid',
   librarySortBy: LibrarySortByType.Updated,
   librarySortAscending: false,
@@ -188,6 +204,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   webdav: DEFAULT_WEBDAV_SETTINGS,
   googleDrive: DEFAULT_GOOGLE_DRIVE_SETTINGS,
   s3: DEFAULT_S3_SETTINGS,
+  litellm: DEFAULT_LITELLM_SETTINGS,
   aiSettings: DEFAULT_AI_SETTINGS,
 
   lastSyncedAtBooks: 0,
@@ -236,7 +253,7 @@ export const DEFAULT_READSETTINGS: ReadSettings = {
   isNotebookPinned: false,
   notebookActiveTab: 'notes',
   autohideCursor: true,
-  translationProvider: 'deepl',
+  translationProvider: 'litellm',
   translateTargetLang: 'EN',
   wordLensAutoDownload: true,
 
@@ -415,7 +432,7 @@ export const DEFAULT_TTS_CONFIG: TTSConfig = {
 
 export const DEFAULT_TRANSLATOR_CONFIG: TranslatorConfig = {
   translationEnabled: false,
-  translationProvider: 'deepl',
+  translationProvider: 'litellm',
   translateTargetLang: '',
   showTranslateSource: true,
   ttsReadAloudText: 'both',

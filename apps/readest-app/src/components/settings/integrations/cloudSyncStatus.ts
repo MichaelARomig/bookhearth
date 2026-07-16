@@ -36,7 +36,7 @@ export interface ThirdPartyRowInputs {
 
 export const getThirdPartyRowStatus = (_: TranslationFunc, s: ThirdPartyRowInputs): string => {
   if (!s.enabled) return s.configured ? _('Configured') : _('Not connected');
-  if (s.paused) return _('Paused — plan required');
+  if (s.paused) return _('Paused');
   if (s.syncing) return _('Syncing…');
   if (s.lastError) return _('Sync failed');
   if (!s.syncBooks) {

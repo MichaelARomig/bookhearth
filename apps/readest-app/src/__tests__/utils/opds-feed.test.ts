@@ -337,4 +337,50 @@ describe('OPDS feed parsing', () => {
       expect(feed.publications![0]!.metadata.updated).toBeUndefined();
     });
   });
+
+  describe('Calibre Content Server root feed discovery', () => {
+    const calibreRootFeed = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>urn:calibre:root</id>
+  <title>Calibre Library</title>
+  <updated>2026-07-09T12:00:00Z</updated>
+  <link rel="self" href="/opds" type="application/atom+xml;profile=opds-catalog"/>
+  <link rel="start" href="/opds" type="application/atom+xml;profile=opds-catalog"/>
+  <link rel="search" href="/opds/search/{searchTerms}" type="application/opensearchdescription+xml"/>
+  <link rel="next" href="/opds/navcatalog/0?page=2" type="application/atom+xml;profile=opds-catalog"/>
+  <entry>
+    <title>By Author</title>
+    <content type="text">Browse books by author</content>
+    <link rel="subsection" href="/opds/navcatalog/1" type="application/atom+xml;profile=opds-catalog"/>
+    <updated>2026-07-09T12:00:00Z</updated>
+  </entry>
+  <entry>
+    <title>Newest</title>
+    <content type="text">Recently added books</content>
+    <link rel="subsection" href="/opds/navcatalog/2" type="application/atom+xml;profile=opds-catalog"/>
+    <updated>2026-07-09T12:00:00Z</updated>
+  </entry>
+</feed>`;
+
+    const getRels = (rel?: string | string[]) => (Array.isArray(rel) ? rel : [rel ?? '']);
+
+    it('preserves discovery links and navigation entries from a calibre root catalog', () => {
+      const doc = parseXML(calibreRootFeed);
+      const feed = getFeed(doc) as OPDSFeed;
+
+      expect(feed.metadata.title).toBe('Calibre Library');
+      expect(feed.metadata.id).toBe('urn:calibre:root');
+      expect(feed.navigation).toHaveLength(2);
+      expect(feed.navigation![0]!.title).toBe('By Author');
+      expect(feed.navigation![0]!.href).toBe('/opds/navcatalog/1');
+      expect(feed.navigation![1]!.title).toBe('Newest');
+      expect(feed.navigation![1]!.href).toBe('/opds/navcatalog/2');
+
+      const searchLink = feed.links.find((link) => getRels(link.rel).includes('search'));
+      expect(searchLink?.href).toBe('/opds/search/{searchTerms}');
+
+      const nextLink = feed.links.find((link) => getRels(link.rel).includes('next'));
+      expect(nextLink?.href).toBe('/opds/navcatalog/0?page=2');
+    });
+  });
 });

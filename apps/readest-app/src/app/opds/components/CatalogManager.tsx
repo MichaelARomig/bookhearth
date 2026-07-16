@@ -30,6 +30,11 @@ import { SectionTitle } from '@/components/settings/primitives';
 import { deleteSubscriptionState, loadSubscriptionState } from '@/services/opds';
 import type { OPDSSubscriptionState } from '@/services/opds/types';
 import { getUnaddedPopularCatalogs, validateOPDSURL } from '../utils/opdsUtils';
+import {
+  getCatalogSetupHint,
+  getCatalogUiDescription,
+  getCatalogUiLabel,
+} from '../utils/catalogUi';
 import { FailedDownloadsDialog } from './FailedDownloadsDialog';
 import {
   formatOPDSCustomHeadersInput,
@@ -400,9 +405,11 @@ export function CatalogManager({ inSubPage = false }: CatalogManagerProps = {}) 
     <div className='container max-w-2xl'>
       {!inSubPage && (
         <div className='mb-8'>
-          <h1 className='mb-1.5 text-lg font-semibold tracking-tight'>{_('OPDS Catalogs')}</h1>
+          <h1 className='mb-1.5 text-lg font-semibold tracking-tight'>
+            {getCatalogUiLabel(_, appService?.isOnlineCatalogsAccessible)}
+          </h1>
           <p className='text-base-content/70 text-sm leading-relaxed'>
-            {_('Browse and download books from online catalogs')}
+            {getCatalogUiDescription(_, appService?.isOnlineCatalogsAccessible)}
           </p>
         </div>
       )}
@@ -425,7 +432,9 @@ export function CatalogManager({ inSubPage = false }: CatalogManagerProps = {}) 
             <IoBook className='text-base-content/40 mx-auto mb-4 h-12 w-12' />
             <h3 className='mb-2 font-semibold'>{_('No catalogs yet')}</h3>
             <p className='text-base-content/70 mb-4 text-sm'>
-              {_('Add your first OPDS catalog to start browsing books')}
+              {appService?.isOnlineCatalogsAccessible
+                ? _('Add your first online catalog to start browsing books')
+                : _('Add your first OPDS / Calibre catalog to start browsing books')}
             </p>
             <button onClick={() => setShowAddDialog(true)} className='btn btn-primary btn-sm'>
               {_('Add Your First Catalog')}
@@ -648,6 +657,9 @@ export function CatalogManager({ inSubPage = false }: CatalogManagerProps = {}) 
               <h3 className='mb-4 text-lg font-semibold tracking-tight'>
                 {editingCatalogId ? _('Edit OPDS Catalog') : _('Add OPDS Catalog')}
               </h3>
+              <p className='text-base-content/70 mb-4 text-sm leading-relaxed'>
+                {getCatalogSetupHint(_, appService?.isOnlineCatalogsAccessible)}
+              </p>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -681,13 +693,20 @@ export function CatalogManager({ inSubPage = false }: CatalogManagerProps = {}) 
                       setNewCatalog({ ...newCatalog, url: e.target.value });
                       setUrlError('');
                     }}
-                    placeholder='https://example.com/opds'
+                    placeholder='http://calibre.local:8080/opds'
                     className='input input-bordered eink-bordered placeholder:text-sm'
                     disabled={isValidating}
                     required
                   />
+                  <div className='label'>
+                    <span className='label-text-alt text-base-content/60'>
+                      {_(
+                        'Examples: http://host:8080/opds, http://host:8080/opds/index.xml, or your Calibre-Web OPDS root URL.',
+                      )}
+                    </span>
+                  </div>
                   {urlError && (
-                    <div className='label'>
+                    <div className='label pt-0'>
                       <span className='label-text-alt text-error'>{urlError}</span>
                     </div>
                   )}

@@ -16,7 +16,10 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { LibraryCoverFitType, LibraryViewModeType } from '@/types/settings';
 import { navigateToLogin } from '@/utils/nav';
-import { isReadestCloudStorageActive } from '@/services/sync/cloudSyncProvider';
+import {
+  getCloudSyncProvider,
+  isReadestCloudStorageActive,
+} from '@/services/sync/cloudSyncProvider';
 import { formatAuthors, formatDescription, formatSeries } from '@/utils/book';
 import ReadingProgress from './ReadingProgress';
 import BookCover from '@/components/BookCover';
@@ -183,13 +186,16 @@ const BookItem: React.FC<BookItemProps> = ({
                 ></div>
               )
             ) : (
-              (!book.uploadedAt || (book.uploadedAt && !book.downloadedAt)) && (
+              ((book.uploadedAt && !book.downloadedAt) ||
+                (!book.uploadedAt &&
+                  settings.autoUpload &&
+                  isReadestCloudStorageActive(settings))) && (
                 <button
                   aria-label={!book.uploadedAt ? _('Upload Book') : _('Download Book')}
                   className='show-cloud-button -m-2 p-2'
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => {
-                    if (!user) {
+                    if (!user && getCloudSyncProvider(settings) === 'readest') {
                       navigateToLogin(router);
                       return;
                     }

@@ -1,14 +1,17 @@
 import clsx from 'clsx';
 import { MdLink, MdRssFeed } from 'react-icons/md';
 import { IoFileTray } from 'react-icons/io5';
+import { LuFolderPlus } from 'react-icons/lu';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
+import { getCatalogUiLabel } from '@/app/opds/utils/catalogUi';
 import MenuItem from '@/components/MenuItem';
 import Menu from '@/components/Menu';
 
 interface ImportMenuProps {
   setIsDropdownOpen?: (open: boolean) => void;
   onImportBooksFromFiles: () => void;
+  onImportIntoCollection: () => void;
   onImportBooksFromDirectory?: () => void;
   onImportBookFromUrl?: () => void;
   onOpenCatalogManager: () => void;
@@ -17,6 +20,7 @@ interface ImportMenuProps {
 const ImportMenu: React.FC<ImportMenuProps> = ({
   setIsDropdownOpen,
   onImportBooksFromFiles,
+  onImportIntoCollection,
   onImportBooksFromDirectory,
   onImportBookFromUrl,
   onOpenCatalogManager,
@@ -26,6 +30,11 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
 
   const handleImportFromFiles = () => {
     onImportBooksFromFiles();
+    setIsDropdownOpen?.(false);
+  };
+
+  const handleImportIntoCollection = () => {
+    onImportIntoCollection();
     setIsDropdownOpen?.(false);
   };
 
@@ -54,6 +63,11 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
         Icon={<IoFileTray className='h-5 w-5' />}
         onClick={handleImportFromFiles}
       />
+      <MenuItem
+        label={_('Import into Collection')}
+        Icon={<LuFolderPlus className='h-5 w-5' />}
+        onClick={handleImportIntoCollection}
+      />
       {onImportBooksFromDirectory && (
         <MenuItem
           label={_('From Directory')}
@@ -69,7 +83,7 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
         />
       )}
       <MenuItem
-        label={appService?.isOnlineCatalogsAccessible ? _('Online Library') : _('OPDS Catalogs')}
+        label={getCatalogUiLabel(_, appService?.isOnlineCatalogsAccessible)}
         Icon={<MdRssFeed className='h-5 w-5' />}
         onClick={handleOpenCatalogManager}
       />

@@ -1,12 +1,11 @@
 __license__ = 'AGPL v3'
 __copyright__ = '2026, Bilingify LLC'
 
-"""HTTP client + content hashes for the Readest cloud API.
+"""HTTP client + content hashes for a Readest-compatible library server.
 
 Standard-library only (no calibre / Qt imports) so it can be unit-tested
-outside calibre. The endpoints and shapes mirror the ones already consumed by
-readest.koplugin (readest-sync-api.json / supabase-auth-api.json) and served
-by apps/readest-app/src/pages/api/.
+outside calibre. The current wire format mirrors the sync/storage endpoints
+served by apps/readest-app plus a Supabase-compatible auth service.
 """
 
 import hashlib
@@ -17,15 +16,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-DEFAULT_API_BASE = 'https://web.readest.com/api'
-DEFAULT_SUPABASE_URL = 'https://readest.supabase.co'
-# Public anon key, same one readest.koplugin ships (base64-encoded in main.lua).
-DEFAULT_ANON_KEY = (
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
-    'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZic3l4ZnVzampxZHhranFseXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3'
-    'MzQxMjM2NzEsImV4cCI6MjA0OTY5OTY3MX0.'
-    '3U5Uqaou_1SgrVe1eo9rApc0uKjqhpQdUXhvwUHmUfg'
-)
+DEFAULT_API_BASE = ''
+DEFAULT_SUPABASE_URL = ''
+DEFAULT_ANON_KEY = ''
 
 TIMEOUT = 30
 UPLOAD_TIMEOUT = 600
@@ -35,6 +28,10 @@ class ReadestAPIError(Exception):
     def __init__(self, message, status=None):
         super().__init__(message)
         self.status = status
+
+
+class ReadestConfigurationError(ReadestAPIError):
+    """Plugin server configuration is incomplete."""
 
 
 class AuthRequiredError(ReadestAPIError):
@@ -135,7 +132,7 @@ def _default_transport(request, timeout):
 
 
 class ReadestClient:
-    """Supabase auth + Readest sync/storage API client.
+    """Supabase-compatible auth + Readest sync/storage API client.
 
     tokens: dict with access_token / refresh_token / expires_at (epoch s) /
     expires_in (s), persisted through the on_tokens callback whenever they
@@ -152,14 +149,58 @@ class ReadestClient:
         on_tokens=None,
         transport=None,
     ):
-        self.api_base = api_base.rstrip('/')
-        self.supabase_url = supabase_url.rstrip('/')
-        self.anon_key = anon_key
+        self.api_base = (api_base or '').strip().rstrip('/')
+        self.supabase_url = (supabase_url or '').strip().rstrip('/')
+        self.anon_key = (anon_key or '').strip()
         self.tokens = dict(tokens) if tokens else None
         self.on_tokens = on_tokens
         self.transport = transport or _default_transport
 
     # -- plumbing -----------------------------------------------------------
+
+    @staticmethod
+    def _format_missing_fields(fields):
+        if len(fields) == 1:
+            return fields[0]
+        return '%s, and %s' % (', '.join(fields[:-1]), fields[-1])
+
+    def missing_api_configuration(self):
+        fields = []
+        if not self.api_base:
+            fields.append('API server URL')
+        return fields
+
+    def missing_auth_configuration(self):
+        fields = []
+        if not self.supabase_url:
+            fields.append('auth server URL')
+        if not self.anon_key:
+            fields.append('public anon key')
+        return fields
+
+    def ensure_api_configured(self):
+        fields = self.missing_api_configuration()
+        if fields:
+            raise ReadestConfigurationError(
+                'Configure the Readest plugin before use: missing %s.'
+                % self._format_missing_fields(fields)
+            )
+
+    def ensure_auth_configured(self):
+        fields = self.missing_auth_configuration()
+        if fields:
+            raise ReadestConfigurationError(
+                'Configure the Readest plugin before use: missing %s.'
+                % self._format_missing_fields(fields)
+            )
+
+    def ensure_configured(self):
+        fields = self.missing_api_configuration() + self.missing_auth_configuration()
+        if fields:
+            raise ReadestConfigurationError(
+                'Configure the Readest plugin before use: missing %s.'
+                % self._format_missing_fields(fields)
+            )
 
     def _request(self, method, url, headers, body=None, timeout=TIMEOUT):
         data = None
@@ -203,6 +244,7 @@ class ReadestClient:
             self.on_tokens(dict(self.tokens))
 
     def sign_in_password(self, email, password):
+        self.ensure_auth_configured()
         status, parsed, payload = self._request(
             'POST',
             self.supabase_url + '/auth/v1/token?grant_type=password',
@@ -219,6 +261,7 @@ class ReadestClient:
         self._store_tokens(tokens)
 
     def refresh(self):
+        self.ensure_auth_configured()
         refresh_token = self.tokens and self.tokens.get('refresh_token')
         if not refresh_token:
             raise AuthRequiredError('Not logged in')
@@ -246,6 +289,7 @@ class ReadestClient:
             self.refresh()
 
     def get_user(self):
+        self.ensure_auth_configured()
         self.ensure_fresh_token()
         headers = dict(self._auth_headers())
         headers['Authorization'] = 'Bearer ' + self.tokens['access_token']
@@ -272,6 +316,7 @@ class ReadestClient:
     # -- Readest API --------------------------------------------------------
 
     def _api(self, method, path, body=None):
+        self.ensure_api_configured()
         self.ensure_fresh_token()
         headers = {
             'Authorization': 'Bearer ' + self.tokens['access_token'],

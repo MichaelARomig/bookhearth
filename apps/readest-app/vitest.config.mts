@@ -22,6 +22,11 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        url: 'https://web.readest.com',
+      },
+    },
     setupFiles: ['./vitest.setup.ts'],
     exclude: [
       '**/node_modules/**',

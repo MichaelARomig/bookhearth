@@ -40,6 +40,7 @@ import {
   getProxiedURL,
   fetchWithAuth,
   probeAuth,
+  createBasicAuth,
   needsProxy,
   probeFilename,
 } from './utils/opdsReq';
@@ -439,6 +440,17 @@ export default function BrowserPage() {
           const expandedHref = expandOPDSSearchTemplate(searchLink.href, queryTerm);
           handleNavigate(resolveURL(expandedHref, state.baseURL), true);
         } else if (searchLink.type === MIME.ATOM) {
+          // Calibre Content Server advertises a path-style Atom template
+          // (`/opds/search/{searchTerms}?library_id=…`, type application/atom+xml).
+          // Expand before resolveURL so braces are not percent-encoded into a 404.
+          const trimmed = queryTerm.trim();
+          if (trimmed) {
+            const expandedHref = expandOPDSSearchTemplate(searchLink.href, trimmed);
+            if (expandedHref !== searchLink.href) {
+              handleNavigate(resolveURL(expandedHref, state.baseURL), true);
+              return;
+            }
+          }
           const search: OPDSSearch = {
             metadata: {
               title: _('Search'),
@@ -455,6 +467,12 @@ export default function BrowserPage() {
             search: (map: Map<string | undefined, Map<string, string>>) => {
               const defaultParams = map.get(undefined);
               const searchTerms = defaultParams?.get('searchTerms') || '';
+              // Prefer template expansion (handles path and query forms); fall
+              // back to decode+replace for already-resolved absolute templates.
+              const expanded = expandOPDSSearchTemplate(searchLink.href!, searchTerms);
+              if (expanded !== searchLink.href) {
+                return resolveURL(expanded, state.baseURL);
+              }
               const decodedURL = decodeURIComponent(searchURL);
               return decodedURL.replace('{searchTerms}', encodeURIComponent(searchTerms));
             },
@@ -570,21 +588,20 @@ export default function BrowserPage() {
           const password = passwordRef.current || '';
           const customHeaders = customHeadersRef.current;
           const useProxy = needsProxy(url);
-          let downloadUrl = useProxy ? getProxiedURL(url, '', true, customHeaders) : url;
+          // Prefer preemptive Basic auth (Calibre Content Server, Calibre-Web).
+          // probeAuth HEAD round-trips are slow, log noisy 401s on the proxy,
+          // and Digest servers are still handled by the fallback below.
+          let authHeader: string | null =
+            username && password ? createBasicAuth(username, password) : null;
+          let downloadUrl = useProxy
+            ? getProxiedURL(url, authHeader || '', true, customHeaders)
+            : url;
           const headers: Record<string, string> = {
             'User-Agent': READEST_OPDS_USER_AGENT,
             Accept: '*/*',
             ...(!useProxy ? customHeaders : {}),
+            ...(authHeader && !useProxy ? { Authorization: authHeader } : {}),
           };
-          if (username || password) {
-            const authHeader = await probeAuth(url, username, password, useProxy, customHeaders);
-            if (authHeader) {
-              if (!useProxy) {
-                headers['Authorization'] = authHeader;
-              }
-              downloadUrl = useProxy ? getProxiedURL(url, authHeader, true, customHeaders) : url;
-            }
-          }
 
           const pathname = decodeURIComponent(new URL(url).pathname);
           const ext = getFileExtFromMimeType(parsed?.mediaType) || getFileExtFromPath(pathname);
@@ -593,16 +610,43 @@ export default function BrowserPage() {
           let dstFilePath = await appService?.resolveFilePath(filename, 'Cache');
           console.log('Downloading to:', url, dstFilePath);
 
-          const responseHeaders = await downloadFile({
-            appService,
-            dst: dstFilePath,
-            cfp: '',
-            url: downloadUrl,
-            headers,
-            singleThreaded: true,
-            skipSslVerification: true,
-            onProgress,
-          });
+          let responseHeaders: Record<string, string>;
+          try {
+            responseHeaders = await downloadFile({
+              appService,
+              dst: dstFilePath,
+              cfp: '',
+              url: downloadUrl,
+              headers,
+              singleThreaded: true,
+              skipSslVerification: true,
+              onProgress,
+            });
+          } catch (downloadError) {
+            // Digest (or other challenge) servers reject preemptive Basic —
+            // re-probe and retry once with the negotiated scheme.
+            if (!username || !password) throw downloadError;
+            authHeader = await probeAuth(url, username, password, useProxy, customHeaders);
+            if (!authHeader || authHeader === createBasicAuth(username, password)) {
+              throw downloadError;
+            }
+            downloadUrl = useProxy ? getProxiedURL(url, authHeader, true, customHeaders) : url;
+            const retryHeaders: Record<string, string> = {
+              ...headers,
+              ...(useProxy ? {} : { Authorization: authHeader }),
+            };
+            if (useProxy) delete retryHeaders['Authorization'];
+            responseHeaders = await downloadFile({
+              appService,
+              dst: dstFilePath,
+              cfp: '',
+              url: downloadUrl,
+              headers: retryHeaders,
+              singleThreaded: true,
+              skipSslVerification: true,
+              onProgress,
+            });
+          }
           const probedFilename = await probeFilename(responseHeaders);
           if (probedFilename) {
             const newFilePath = await appService?.resolveFilePath(probedFilename, 'Cache');
@@ -693,19 +737,16 @@ export default function BrowserPage() {
         return await appService.getImageURL(cachedPath);
       } else {
         const useProxy = needsProxy(url);
-        let downloadUrl = useProxy ? getProxiedURL(url, '', true, customHeaders) : url;
+        // Preemptive Basic — same policy as acquisition downloads. Avoids a
+        // HEAD probe that only produces proxy 401 noise against Calibre.
+        const authHeader = username && password ? createBasicAuth(username, password) : null;
+        const downloadUrl = useProxy
+          ? getProxiedURL(url, authHeader || '', true, customHeaders)
+          : url;
         const headers: Record<string, string> = {
           ...(!useProxy ? customHeaders : {}),
+          ...(authHeader && !useProxy ? { Authorization: authHeader } : {}),
         };
-        if (username || password) {
-          const authHeader = await probeAuth(url, username, password, useProxy, customHeaders);
-          if (authHeader) {
-            if (!useProxy) {
-              headers['Authorization'] = authHeader;
-            }
-            downloadUrl = useProxy ? getProxiedURL(url, authHeader, true, customHeaders) : url;
-          }
-        }
         await downloadFile({
           appService,
           dst: cachedPath,

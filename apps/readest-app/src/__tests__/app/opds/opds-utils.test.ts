@@ -312,6 +312,24 @@ describe('opdsUtils', () => {
     it('returns the href unchanged when there are no template variables', () => {
       expect(expandOPDSSearchTemplate('/search', 'foo')).toBe('/search');
     });
+
+    it('expands Calibre path-style {searchTerms} templates', () => {
+      expect(
+        expandOPDSSearchTemplate('/opds/search/{searchTerms}?library_id=calibre-library', 'Alice'),
+      ).toBe('/opds/search/Alice?library_id=calibre-library');
+    });
+
+    it('recovers path braces percent-encoded by URL resolution', () => {
+      // new URL('/opds/search/{searchTerms}', base) encodes braces as %7B/%7D.
+      const resolved = resolveURL(
+        '/opds/search/{searchTerms}?library_id=calibre-library',
+        'http://127.0.0.1:8080/opds',
+      );
+      expect(resolved).toContain('%7BsearchTerms%7D');
+      expect(expandOPDSSearchTemplate(resolved, 'Alice')).toBe(
+        'http://127.0.0.1:8080/opds/search/Alice?library_id=calibre-library',
+      );
+    });
   });
 
   describe('resolveURL', () => {

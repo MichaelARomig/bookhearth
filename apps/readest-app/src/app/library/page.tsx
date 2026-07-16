@@ -58,7 +58,7 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useTransferStore } from '@/store/transferStore';
 import { useScreenWakeLock } from '@/hooks/useScreenWakeLock';
 import { useBackgroundTexture } from '@/hooks/useBackgroundTexture';
-import { getLibraryViewSettings } from '@/helpers/settings';
+import { getLibraryViewSettings, saveSysSettings } from '@/helpers/settings';
 import { useAppUrlIngress } from '@/hooks/useAppUrlIngress';
 import { useOpenWithBooks } from '@/hooks/useOpenWithBooks';
 import { useOpenAnnotationLink } from '@/hooks/useOpenAnnotationLink';
@@ -108,6 +108,7 @@ import ImportFromFolderDialog, {
   ImportFromFolderResult,
 } from './components/ImportFromFolderDialog';
 import ImportFromUrlDialog from './components/ImportFromUrlDialog';
+import CreateCollectionDialog from './components/CreateCollectionDialog';
 import NowPlayingBar from './components/NowPlayingBar';
 import { ttsSessionManager } from '@/services/tts';
 import { convertToEpubWithWorker } from '@/services/send/conversion/conversionWorker';
@@ -204,6 +205,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   const [showCatalogManager, setShowCatalogManager] = useState(
     searchParams?.get('opds') === 'true',
   );
+  const [showCreateCollectionDialog, setShowCreateCollectionDialog] = useState(false);
   const [showImportFromUrl, setShowImportFromUrl] = useState(false);
   const [loading, setLoading] = useState(false);
   // Seed from the library store: if we already have books in memory (the
@@ -310,7 +312,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   usePullToRefresh(
     scrollRef,
     async () => {
-      if (!user) {
+      if (!user && getCloudSyncProvider(useSettingsStore.getState().settings) === 'readest') {
         navigateToLogin(router);
         return;
       }
@@ -318,7 +320,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
       checkOPDSSubscriptions(true);
     },
     async () => {
-      if (!user) {
+      if (!user && getCloudSyncProvider(useSettingsStore.getState().settings) === 'readest') {
         navigateToLogin(router);
         return;
       }
@@ -596,7 +598,9 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           saveSettings(envConfig, settings);
         }
       } else if (settings.keepLogin) {
-        router.push('/auth');
+        settings.keepLogin = false;
+        setSettings(settings);
+        saveSettings(envConfig, settings);
       }
     };
 
@@ -733,7 +737,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   const importBooks = async (
     files: SelectedFile[],
     groupId?: string,
-    options: { silent?: boolean } = {},
+    options: { silent?: boolean; groupName?: string } = {},
   ): Promise<{ failedPaths: string[] }> => {
     setLoading(true);
     const { library } = useLibraryStore.getState();
@@ -776,7 +780,8 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         // keep the existingBook's stale groupId/groupName from a prior
         // import instead of moving the book to the root.
         let resolvedGroupId = groupId;
-        let resolvedGroupName = groupId !== undefined ? getGroupName(groupId) : undefined;
+        let resolvedGroupName =
+          options.groupName || (groupId !== undefined ? getGroupName(groupId) : undefined);
         if (resolvedGroupId === undefined && path && basePath) {
           const rootPath = getDirPath(basePath);
           resolvedGroupName = getDirPath(path).replace(rootPath, '').replace(/^\//, '');
@@ -1207,6 +1212,31 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
     console.log('[clip] done');
   };
 
+  const handleImportIntoCollection = async (groupName: string): Promise<boolean> => {
+    const trimmed = groupName.trim();
+    if (!trimmed) return false;
+
+    setIsSelectMode(false);
+    const targetGroupId = getGroupId(trimmed) || '';
+    const result = await selectFiles({
+      type: 'books',
+      multiple: true,
+      dialogTitle: _('Select Books for {{name}}', { name: trimmed }),
+    });
+    if (result.files.length === 0 || result.error) {
+      return false;
+    }
+
+    await importBooks(result.files, targetGroupId, { groupName: trimmed });
+    await saveSysSettings(envConfig, 'libraryGroupBy', LibraryGroupByType.Group);
+
+    const params = new URLSearchParams(searchParams?.toString());
+    params.delete('groupBy');
+    params.set('group', targetGroupId);
+    navigateToLibrary(router, `${params.toString()}`);
+    return true;
+  };
+
   const handleImportBooksFromDirectory = async (dirPath?: string) => {
     if (!appService || !isTauriAppPlatform()) return;
 
@@ -1614,6 +1644,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           isSelectAll={isSelectAll}
           onPullLibrary={pullLibrary}
           onImportBooksFromFiles={handleImportBooksFromFiles}
+          onImportIntoCollection={() => setShowCreateCollectionDialog(true)}
           onImportBooksFromDirectory={
             appService?.canReadExternalDir ? handleImportBooksFromDirectory : undefined
           }
@@ -1716,7 +1747,11 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         ) : (
           <div className='hero drop-zone h-screen items-center justify-center'>
             <DropIndicator />
-            <LibraryEmptyState onImport={handleImportBooksFromFiles} />
+            <LibraryEmptyState
+              onImport={handleImportBooksFromFiles}
+              onImportIntoCollection={() => setShowCreateCollectionDialog(true)}
+              onOpenCatalogManager={handleShowOPDSDialog}
+            />
           </div>
         ))}
       <NowPlayingBar isSelectMode={isSelectMode} />
@@ -1801,6 +1836,11 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         isOpen={showImportFromUrl}
         onClose={() => setShowImportFromUrl(false)}
         onSubmit={handleImportBookFromUrl}
+      />
+      <CreateCollectionDialog
+        isOpen={showCreateCollectionDialog}
+        onClose={() => setShowCreateCollectionDialog(false)}
+        onSubmit={handleImportIntoCollection}
       />
       <Toast />
     </div>

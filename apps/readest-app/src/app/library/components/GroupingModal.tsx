@@ -78,7 +78,7 @@ const GroupingModal: React.FC<GroupingModalProps> = ({
     : null;
 
   const generateNextUntitledGroupName = () => {
-    const baseName = _('Untitled Group');
+    const baseName = _('Untitled Collection');
     const basePattern = parentGroupName
       ? `${parentGroupName}/${baseName}`
       : currentPath
@@ -258,7 +258,7 @@ const GroupingModal: React.FC<GroupingModalProps> = ({
           'max-h-[85%] w-[95%] min-w-64 max-w-[440px] p-6 sm:w-[70%]',
         )}
       >
-        <h2 className='text-center text-lg font-bold'>{_('Group Books')}</h2>
+        <h2 className='text-center text-lg font-bold'>{_('Organize Collections')}</h2>
 
         {/* Action buttons */}
         <div className={clsx('mt-4 grid grid-cols-1 gap-2 text-base md:grid-cols-2')}>
@@ -268,14 +268,14 @@ const GroupingModal: React.FC<GroupingModalProps> = ({
             disabled={!isSelectedBooksHasGroup}
           >
             <HiOutlineFolderRemove size={iconSize} />
-            <span className='truncate'>{_('Remove From Group')}</span>
+            <span className='truncate'>{_('Remove From Collection')}</span>
           </button>
           <button
             onClick={handleCreateGroup}
             className='flex items-center space-x-2 p-2 text-blue-500 disabled:text-gray-400'
           >
             <HiOutlineFolderAdd size={iconSize} />
-            <span className='truncate'>{_('Create New Group')}</span>
+            <span className='truncate'>{_('Create New Collection')}</span>
           </button>
           <button
             onClick={handleRenameGroup}
@@ -283,7 +283,7 @@ const GroupingModal: React.FC<GroupingModalProps> = ({
             disabled={!canRenameGroup}
           >
             <MdEdit size={iconSize} />
-            <span className='truncate'>{_('Rename Group')}</span>
+            <span className='truncate'>{_('Rename Collection')}</span>
           </button>
         </div>
 

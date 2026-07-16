@@ -186,7 +186,7 @@ describe('services/constants', () => {
 
     it('has expected keys with correct types', () => {
       expect(typeof DEFAULT_KOSYNC_SETTINGS.serverUrl).toBe('string');
-      expect(DEFAULT_KOSYNC_SETTINGS.serverUrl).toMatch(/^https?:\/\//);
+      expect(DEFAULT_KOSYNC_SETTINGS.serverUrl).toBe('');
       expect(typeof DEFAULT_KOSYNC_SETTINGS.username).toBe('string');
       expect(typeof DEFAULT_KOSYNC_SETTINGS.userkey).toBe('string');
       expect(typeof DEFAULT_KOSYNC_SETTINGS.deviceId).toBe('string');
@@ -235,7 +235,6 @@ describe('services/constants', () => {
       expect(typeof DEFAULT_SYSTEM_SETTINGS.openLastBooks).toBe('boolean');
       expect(typeof DEFAULT_SYSTEM_SETTINGS.autoImportBooksOnOpen).toBe('boolean');
       expect(typeof DEFAULT_SYSTEM_SETTINGS.telemetryEnabled).toBe('boolean');
-      expect(typeof DEFAULT_SYSTEM_SETTINGS.discordRichPresenceEnabled).toBe('boolean');
     });
 
     it('has screen brightness in valid range', () => {

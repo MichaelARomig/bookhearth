@@ -129,10 +129,20 @@ describe('environment', () => {
       expect(getBaseUrl()).toBe('https://custom-api.example.com');
     });
 
-    test('falls back to READEST_WEB_BASE_URL when env var not set', async () => {
+    test('falls back to READEST_WEB_BASE_URL only on the web platform', async () => {
+      env['NEXT_PUBLIC_APP_PLATFORM'] = 'web';
       delete env['NEXT_PUBLIC_API_BASE_URL'];
+      delete env['API_BASE_URL'];
       const { getBaseUrl } = await import('@/services/environment');
       expect(getBaseUrl()).toBe('https://web.readest.com');
+    });
+
+    test('does not fall back to official hosts on tauri (local-first)', async () => {
+      env['NEXT_PUBLIC_APP_PLATFORM'] = 'tauri';
+      delete env['NEXT_PUBLIC_API_BASE_URL'];
+      delete env['API_BASE_URL'];
+      const { getBaseUrl } = await import('@/services/environment');
+      expect(getBaseUrl()).toBe('');
     });
   });
 
@@ -144,10 +154,18 @@ describe('environment', () => {
       expect(getNodeBaseUrl()).toBe('https://custom-node.example.com');
     });
 
-    test('falls back to READEST_NODE_BASE_URL when env var not set', async () => {
+    test('falls back to READEST_NODE_BASE_URL only on the web platform', async () => {
+      env['NEXT_PUBLIC_APP_PLATFORM'] = 'web';
       delete env['NEXT_PUBLIC_NODE_BASE_URL'];
       const { getNodeBaseUrl } = await import('@/services/environment');
       expect(getNodeBaseUrl()).toBe('https://node.readest.com');
+    });
+
+    test('does not fall back to official node host on tauri', async () => {
+      env['NEXT_PUBLIC_APP_PLATFORM'] = 'tauri';
+      delete env['NEXT_PUBLIC_NODE_BASE_URL'];
+      const { getNodeBaseUrl } = await import('@/services/environment');
+      expect(getNodeBaseUrl()).toBe('');
     });
   });
 
@@ -222,12 +240,21 @@ describe('environment', () => {
       expect(getAPIBaseUrl()).toBe('https://web.readest.com/api');
     });
 
-    test('returns full URL for tauri platform even in development', async () => {
+    test('returns empty API base for tauri without explicit config (local-first)', async () => {
       env['NODE_ENV'] = 'development';
       env['NEXT_PUBLIC_APP_PLATFORM'] = 'tauri';
       delete env['NEXT_PUBLIC_API_BASE_URL'];
+      delete env['API_BASE_URL'];
       const { getAPIBaseUrl } = await import('@/services/environment');
-      expect(getAPIBaseUrl()).toBe('https://web.readest.com/api');
+      expect(getAPIBaseUrl()).toBe('');
+    });
+
+    test('uses explicit API base on tauri when configured', async () => {
+      env['NODE_ENV'] = 'development';
+      env['NEXT_PUBLIC_APP_PLATFORM'] = 'tauri';
+      env['NEXT_PUBLIC_API_BASE_URL'] = 'https://my-proxy.example.com';
+      const { getAPIBaseUrl } = await import('@/services/environment');
+      expect(getAPIBaseUrl()).toBe('https://my-proxy.example.com/api');
     });
   });
 
@@ -248,12 +275,12 @@ describe('environment', () => {
       expect(getNodeAPIBaseUrl()).toBe('https://node.readest.com/api');
     });
 
-    test('returns full node URL for tauri platform even in development', async () => {
+    test('returns empty node API base for tauri without explicit config', async () => {
       env['NODE_ENV'] = 'development';
       env['NEXT_PUBLIC_APP_PLATFORM'] = 'tauri';
       delete env['NEXT_PUBLIC_NODE_BASE_URL'];
       const { getNodeAPIBaseUrl } = await import('@/services/environment');
-      expect(getNodeAPIBaseUrl()).toBe('https://node.readest.com/api');
+      expect(getNodeAPIBaseUrl()).toBe('');
     });
   });
 

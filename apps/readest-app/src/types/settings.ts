@@ -202,6 +202,32 @@ export interface S3Settings {
 }
 
 /**
+ * Shared configuration for the user-controlled, OpenAI-compatible LiteLLM
+ * endpoint that backs AI text-to-speech and translation (SPEC §6). One
+ * endpoint + credential is shared by both adapters; the TTS and translation
+ * models are configured independently so a deployment can route them to
+ * different upstream providers. Credentials live here like the other
+ * integration blocks (WebDAV/KOSync) and are redacted from logs/exports.
+ */
+export interface LiteLLMSettings {
+  enabled: boolean;
+  /** Base URL of the OpenAI-compatible API, e.g. `https://litellm.lan/v1`. */
+  baseUrl: string;
+  /** Bearer token / API key. Empty is allowed for keyless LAN deployments. */
+  apiKey: string;
+  /** Optional extra request headers (e.g. a virtual-key or routing header). */
+  customHeaders: Record<string, string>;
+  /** Model id passed to the `/audio/speech` endpoint. */
+  ttsModel: string;
+  /** Default voice id passed to the `/audio/speech` endpoint. */
+  ttsVoice: string;
+  /** Model id passed to the `/chat/completions` translation endpoint. */
+  translationModel: string;
+  /** Per-request timeout in milliseconds. */
+  timeoutMs: number;
+}
+
+/**
  * User-facing sync categories. 'progress' gates the existing book-config
  * (reading progress) sync, 'note' gates annotations, 'book' gates book
  * binaries + metadata, 'dictionary' gates the imported-dictionary replica
@@ -301,7 +327,6 @@ export interface SystemSettings {
   savedBookCoverForLockScreen: string;
   savedBookCoverForLockScreenPath: string;
   telemetryEnabled: boolean;
-  discordRichPresenceEnabled: boolean;
   libraryViewMode: LibraryViewModeType;
   librarySortBy: LibrarySortByType;
   librarySortAscending: boolean;
@@ -369,6 +394,7 @@ export interface SystemSettings {
   webdav: WebDAVSettings;
   googleDrive: GoogleDriveSettings;
   s3: S3Settings;
+  litellm: LiteLLMSettings;
 
   aiSettings: AISettings;
   /**

@@ -13,6 +13,7 @@ import { createRejectFilter } from '@/utils/node';
 import { WebSpeechClient } from './WebSpeechClient';
 import { NativeTTSClient } from './NativeTTSClient';
 import { EdgeTTSClient } from './EdgeTTSClient';
+import { LiteLLMTTSClient } from './LiteLLMTTSClient';
 import { SectionTimeline, TimelineSentence } from './SectionTimeline';
 import { TTSUtils } from './TTSUtils';
 import { TTSClient } from './TTSClient';
@@ -152,9 +153,11 @@ export class TTSController extends EventTarget {
   ttsWebClient: TTSClient;
   ttsEdgeClient: TTSClient;
   ttsNativeClient: TTSClient | null = null;
+  ttsLiteLLMClient: TTSClient;
   ttsWebVoices: TTSVoice[] = [];
   ttsEdgeVoices: TTSVoice[] = [];
   ttsNativeVoices: TTSVoice[] = [];
+  ttsLiteLLMVoices: TTSVoice[] = [];
   ttsTargetLang: string = '';
 
   options: TTSHighlightOptions = { style: 'highlight', color: 'gray' };
@@ -174,6 +177,9 @@ export class TTSController extends EventTarget {
     if (appService?.isAndroidApp || appService?.isIOSApp) {
       this.ttsNativeClient = new NativeTTSClient(this);
     }
+    // User-configured, OpenAI-compatible LiteLLM TTS (SPEC §6.1). Available on
+    // every platform; init() gates it on the shared endpoint being configured.
+    this.ttsLiteLLMClient = new LiteLLMTTSClient(this);
     this.ttsClient = this.ttsWebClient;
     this.appService = appService;
     this.view = view;
@@ -311,6 +317,10 @@ export class TTSController extends EventTarget {
     if (this.ttsNativeClient && (await this.ttsNativeClient.init())) {
       availableClients.push(this.ttsNativeClient);
       this.ttsNativeVoices = await this.ttsNativeClient.getAllVoices();
+    }
+    if (await this.ttsLiteLLMClient.init()) {
+      availableClients.push(this.ttsLiteLLMClient);
+      this.ttsLiteLLMVoices = await this.ttsLiteLLMClient.getAllVoices();
     }
     if (await this.ttsWebClient.init()) {
       availableClients.push(this.ttsWebClient);
@@ -866,6 +876,7 @@ export class TTSController extends EventTarget {
     if (this.ttsEdgeClient.initialized) this.ttsEdgeClient.setPrimaryLang(lang);
     if (this.ttsWebClient.initialized) this.ttsWebClient.setPrimaryLang(lang);
     if (this.ttsNativeClient?.initialized) this.ttsNativeClient?.setPrimaryLang(lang);
+    if (this.ttsLiteLLMClient.initialized) this.ttsLiteLLMClient.setPrimaryLang(lang);
   }
 
   async setRate(rate: number) {
@@ -879,8 +890,16 @@ export class TTSController extends EventTarget {
     const ttsWebVoices = await this.ttsWebClient.getVoices(lang);
     const ttsEdgeVoices = await this.ttsEdgeClient.getVoices(lang);
     const ttsNativeVoices = (await this.ttsNativeClient?.getVoices(lang)) ?? [];
+    const ttsLiteLLMVoices = this.ttsLiteLLMClient.initialized
+      ? await this.ttsLiteLLMClient.getVoices(lang)
+      : [];
 
-    const voicesGroups = [...ttsNativeVoices, ...ttsEdgeVoices, ...ttsWebVoices];
+    const voicesGroups = [
+      ...ttsNativeVoices,
+      ...ttsLiteLLMVoices,
+      ...ttsEdgeVoices,
+      ...ttsWebVoices,
+    ];
     return voicesGroups;
   }
 
@@ -892,6 +911,11 @@ export class TTSController extends EventTarget {
     const useNativeTTS = !!this.ttsNativeVoices.find(
       (voice) => (voiceId === '' || voice.id === voiceId) && !voice.disabled,
     );
+    // Only matched by an explicit LiteLLM voice id — an empty voiceId keeps the
+    // existing Edge/Web default so enabling the endpoint never hijacks TTS.
+    const useLiteLLMTTS = !!this.ttsLiteLLMVoices.find(
+      (voice) => voiceId !== '' && voice.id === voiceId && !voice.disabled,
+    );
     if (useEdgeTTS) {
       this.ttsClient = this.ttsEdgeClient;
       await this.ttsClient.setRate(this.ttsRate);
@@ -900,6 +924,9 @@ export class TTSController extends EventTarget {
         throw new Error('Native TTS client is not available');
       }
       this.ttsClient = this.ttsNativeClient;
+      await this.ttsClient.setRate(this.ttsRate);
+    } else if (useLiteLLMTTS) {
+      this.ttsClient = this.ttsLiteLLMClient;
       await this.ttsClient.setRate(this.ttsRate);
     } else {
       this.ttsClient = this.ttsWebClient;

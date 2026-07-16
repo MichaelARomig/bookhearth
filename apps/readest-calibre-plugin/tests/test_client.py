@@ -12,6 +12,7 @@ from api import (  # noqa: E402
     QuotaExceededError,
     ReadestAPIError,
     ReadestClient,
+    ReadestConfigurationError,
 )
 
 API_BASE = 'https://web.example.com/api'
@@ -102,6 +103,26 @@ class SignInTest(unittest.TestCase):
         with self.assertRaises(ReadestAPIError) as ctx:
             client.sign_in_password('a@b.c', 'bad')
         self.assertIn('Invalid login credentials', str(ctx.exception))
+
+
+class ConfigurationTest(unittest.TestCase):
+    def test_password_sign_in_requires_auth_configuration(self):
+        client = ReadestClient(api_base=API_BASE, transport=FakeTransport())
+        with self.assertRaises(ReadestConfigurationError) as ctx:
+            client.sign_in_password('a@b.c', 'pw')
+        self.assertIn('auth server URL', str(ctx.exception))
+        self.assertIn('public anon key', str(ctx.exception))
+
+    def test_api_calls_require_api_server_configuration(self):
+        client = ReadestClient(
+            supabase_url=SUPABASE,
+            anon_key=ANON_KEY,
+            tokens=valid_tokens(),
+            transport=FakeTransport(),
+        )
+        with self.assertRaises(ReadestConfigurationError) as ctx:
+            client.pull_books()
+        self.assertIn('API server URL', str(ctx.exception))
 
 
 class TokenRefreshTest(unittest.TestCase):

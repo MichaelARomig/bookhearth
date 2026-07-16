@@ -155,16 +155,28 @@ export const isSearchLink = (link: OPDSBaseLink): boolean => {
 const SEARCH_TERM_VARS = ['query', 'searchTerms', 'q'];
 
 /**
- * Expand an OPDS 2.0 search link's RFC 6570 URI template with a single free-text
+ * Expand an OPDS search link's RFC 6570 URI template with a single free-text
  * query term. The term is placed into the template's primary text variable
  * (`query`, `searchTerms`, or `q`; otherwise the first variable). Returns the
  * href unchanged when it has no template variables.
+ *
+ * Also recovers templates that already passed through URL resolution, which
+ * percent-encodes path braces (`{searchTerms}` → `%7BsearchTerms%7D`). That is
+ * the Calibre Content Server pattern (`/opds/search/{searchTerms}?library_id=…`).
  */
 export const expandOPDSSearchTemplate = (templateHref: string, queryTerm: string): string => {
-  const variables = Array.from(getVariables(templateHref) as Set<string>);
+  let href = templateHref;
+  if (!(getVariables(href) as Set<string>).size && /%7[Bb]/.test(href)) {
+    try {
+      href = decodeURIComponent(href);
+    } catch {
+      // Keep the original string if decoding fails.
+    }
+  }
+  const variables = Array.from(getVariables(href) as Set<string>);
   const textVar = variables.find((name) => SEARCH_TERM_VARS.includes(name)) ?? variables[0];
   if (!textVar) return templateHref;
-  return expandURITemplate(templateHref, new Map([[textVar, queryTerm]]));
+  return expandURITemplate(href, new Map([[textVar, queryTerm]]));
 };
 
 export const resolveURL = (url: string, relativeTo: string): string => {

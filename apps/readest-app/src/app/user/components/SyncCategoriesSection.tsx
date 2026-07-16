@@ -117,8 +117,7 @@ export function SyncCategoriesSection() {
           // progress / note channels are routed to it at runtime and these
           // toggles have no immediate effect. The description says so in
           // place (same pattern as `locked`), but the toggle stays
-          // interactive and persists: it governs the native channel the
-          // user returns to when Readest Cloud is re-selected.
+          // interactive and persists for any later provider change.
           const managedByProvider =
             cloudProvider !== 'readest' &&
             (category === 'book' || category === 'progress' || category === 'note');
@@ -128,7 +127,7 @@ export function SyncCategoriesSection() {
                 <span className='text-base-content text-sm font-medium'>{c.title}</span>
                 <span className='text-base-content/60 text-xs'>
                   {managedByProvider
-                    ? _('Managed by {{provider}} while it is your cloud sync provider', {
+                    ? _('Managed by {{provider}} while it is your selected sync provider', {
                         provider: cloudProviderName,
                       })
                     : locked

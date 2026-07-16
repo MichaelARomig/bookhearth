@@ -63,4 +63,12 @@ describe('GroupHeader back button', () => {
     expect(params.get('sort')).toBe('title');
     expect(params.get('group')).toBe('');
   });
+
+  it('labels custom collections as Collection (not Group)', () => {
+    currentSearch = 'group=abc123';
+    render(<GroupHeader groupBy={LibraryGroupByType.Group} groupName='Weekend Reads' />);
+    expect(screen.getByText('Collection:')).toBeTruthy();
+    expect(screen.getByText('Weekend Reads')).toBeTruthy();
+    expect(screen.queryByText(/^Group:/)).toBeNull();
+  });
 });

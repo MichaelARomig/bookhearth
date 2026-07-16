@@ -44,7 +44,8 @@ const GroupHeader: React.FC<GroupHeaderProps> = ({ groupBy, groupName }) => {
       case LibraryGroupByType.Author:
         return _('Author');
       default:
-        return _('Group');
+        // User-facing term is Collection (View menu "Group by… → Collections").
+        return _('Collection');
     }
   };
 

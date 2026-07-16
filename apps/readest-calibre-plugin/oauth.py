@@ -3,11 +3,12 @@ __copyright__ = '2026, Bilingify LLC'
 
 """Browser OAuth sign-in via a localhost callback server.
 
-Supabase redirects OAuth logins to the whitelisted http://localhost:{port}
-with the session tokens in the URL *fragment* — the same flow readest-app's
-desktop custom-OAuth mode uses (tauri-plugin-oauth). Fragments never reach an
-HTTP server, so the first response serves a page whose script forwards the
-fragment as query parameters to /callback. Standard-library only.
+The configured Supabase-compatible auth server redirects OAuth logins to the
+whitelisted http://localhost:{port} with the session tokens in the URL
+*fragment* — the same flow readest-app's desktop custom-OAuth mode uses
+(tauri-plugin-oauth). Fragments never reach an HTTP server, so the first
+response serves a page whose script forwards the fragment as query parameters
+to /callback. Standard-library only.
 """
 
 import threading

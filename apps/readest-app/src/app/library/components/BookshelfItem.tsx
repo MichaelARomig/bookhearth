@@ -175,7 +175,7 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
         },
       },
       group: {
-        text: _('Group Books'),
+        text: _('Organize Collections'),
         action: async () => {
           if (!isSelectMode) handleSetSelectMode(true);
           if (!itemSelected) {
@@ -265,14 +265,14 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
     // note in bookContextMenuHandler about the Menu.append() IPC race (#4389).
     const items: MenuItemOptions[] = [
       {
-        text: itemSelected ? _('Deselect Group') : _('Select Group'),
+        text: itemSelected ? _('Deselect Collection') : _('Select Collection'),
         action: async () => {
           if (!isSelectMode) handleSetSelectMode(true);
           toggleSelection(group.id);
         },
       },
       {
-        text: _('Group Books'),
+        text: _('Organize Collections'),
         action: async () => {
           if (!isSelectMode) handleSetSelectMode(true);
           if (!itemSelected) {

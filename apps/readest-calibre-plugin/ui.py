@@ -6,7 +6,7 @@ from qt.core import QMenu
 from calibre.gui2 import error_dialog, info_dialog
 from calibre.gui2.actions import InterfaceAction
 
-from calibre_plugins.readest.api import ReadestClient
+from calibre_plugins.readest.api import ReadestClient, ReadestConfigurationError
 from calibre_plugins.readest.config import prefs, save_tokens
 from calibre_plugins.readest.dialogs import LoginDialog, PushDialog
 
@@ -15,6 +15,7 @@ def make_client():
     return ReadestClient(
         api_base=prefs['api_base'],
         supabase_url=prefs['supabase_url'],
+        anon_key=prefs['anon_key'],
         tokens=prefs['tokens'],
         on_tokens=save_tokens,
     )
@@ -75,24 +76,44 @@ class ReadestInterfacePlugin(InterfaceAction):
     def selected_book_ids(self):
         return self.gui.library_view.get_selected_ids()
 
+    def require_configured_client(self):
+        client = make_client()
+        try:
+            client.ensure_configured()
+        except ReadestConfigurationError as err:
+            error_dialog(
+                self.gui,
+                'Readest not configured',
+                '%s Open Customize plugin... and enter your server details.' % err,
+                show=True,
+            )
+            return None
+        return client
+
     def push_selected(self):
         book_ids = self.selected_book_ids()
         if not book_ids:
             return error_dialog(
                 self.gui, 'No books selected', 'Select the books to push to Readest.', show=True
             )
-        if not prefs['tokens'] and not self.login():
+        client = self.require_configured_client()
+        if client is None:
+            return
+        if not prefs['tokens'] and not self.login(client):
             return
         PushDialog(
             self.gui,
             self.gui.current_db.new_api,
             book_ids,
-            make_client(),
+            client,
             bool(prefs['include_custom_columns']),
         ).exec()
 
-    def login(self):
-        dialog = LoginDialog(self.gui, make_client())
+    def login(self, client=None):
+        client = client or self.require_configured_client()
+        if client is None:
+            return False
+        dialog = LoginDialog(self.gui, client)
         if dialog.exec() != dialog.DialogCode.Accepted:
             return False
         user = dialog.user or {}
