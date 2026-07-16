@@ -51,7 +51,11 @@
       Restored the tracked customized Android adaptive-icon XML
       (`gen/android/.../mipmap-anydpi-v26/ic_launcher.xml`) after `tauri icon`
       clobbered it — it carries the `<monochrome>` themed-icon layer + 22% inset
-      foreground (guarded by `themed-icon.test.ts`).
+      foreground (guarded by `themed-icon.test.ts`). Also replaced the tracked
+      icon source master `data/icons/readest-book.png` (filename kept for
+      CI/release/worktree parity — it's an internal build input) with the
+      Bookhearth 1024 master so those regen paths stay on-brand. Provenance +
+      regen steps documented in `data/icons/README.md`.
 - [ ] **Follow-up:** the Android 13+ **themed (monochrome) launcher icon** still
       uses the old silhouette — `ic_launcher_monochrome.png` (all densities) is a
       tracked customization that `tauri icon` does NOT regenerate, and
