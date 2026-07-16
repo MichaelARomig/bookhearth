@@ -42,6 +42,14 @@ vi.mock('@tauri-apps/plugin-http', () => ({
   fetch: vi.fn(),
 }));
 
+// Providers now read per-provider enablement from the settings store (via
+// ../enablement). Stub the store so importing it doesn't pull in i18n side
+// effects (a stray /locales fetch), and so enablement falls back to defaults
+// (google/azure/yandex enabled, deepl disabled).
+vi.mock('@/store/settingsStore', () => ({
+  useSettingsStore: { getState: () => ({ settings: {} }) },
+}));
+
 // Stub Supabase so importing the full providers registry (which pulls in
 // deepl.ts → @/utils/access → @/utils/supabase) doesn't instantiate a real
 // GoTrueClient on every `vi.resetModules()` round. Without this, each test
@@ -344,20 +352,23 @@ describe('provider registry disabled handling', () => {
     expect(names).toContain('yandex');
   });
 
-  it('exposes yandex as disabled so callers can grey it out', async () => {
+  it('enables yandex by default (user-toggle driven, empty settings store)', async () => {
     const { getTranslator } = await import('@/services/translators/providers');
     const yandex = getTranslator('yandex');
     expect(yandex).toBeDefined();
-    expect(yandex!.disabled).toBe(true);
+    expect(yandex!.disabled).toBe(false);
   });
 
-  it('isTranslatorAvailable returns false for disabled providers', async () => {
+  it('isTranslatorAvailable returns false for disabled providers (DeepL w/o key)', async () => {
     const { getTranslator, isTranslatorAvailable } = await import(
       '@/services/translators/providers'
     );
-    const yandex = getTranslator('yandex')!;
-    expect(isTranslatorAvailable(yandex, true)).toBe(false);
-    expect(isTranslatorAvailable(yandex, false)).toBe(false);
+    // DeepL is off by default (toggle off + no key), so it stands in for the
+    // "disabled provider" case now that yandex is user-enabled by default.
+    const deepl = getTranslator('deepl')!;
+    expect(deepl.disabled).toBe(true);
+    expect(isTranslatorAvailable(deepl, true)).toBe(false);
+    expect(isTranslatorAvailable(deepl, false)).toBe(false);
   });
 
   it('isTranslatorAvailable returns false for authRequired without token', async () => {
