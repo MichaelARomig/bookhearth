@@ -3,6 +3,7 @@ import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { isTauriAppPlatform } from '@/services/environment';
 import { TranslationProvider } from '../types';
 import { normalizeToFullLang } from '@/utils/lang';
+import { isTranslationProviderEnabled } from '../enablement';
 
 interface TokenCache {
   token: string;
@@ -49,6 +50,9 @@ const getAuthToken = async (): Promise<string> => {
 export const azureProvider: TranslationProvider = {
   name: 'azure',
   label: _('Azure Translator'),
+  get disabled() {
+    return !isTranslationProviderEnabled('azure');
+  },
   translate: async (text: string[], sourceLang: string, targetLang: string): Promise<string[]> => {
     if (!text.length) return [];
 

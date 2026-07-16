@@ -13,7 +13,11 @@ import {
 } from '@/services/translators';
 import { useResetViewSettings } from '@/hooks/useResetSettings';
 import { useKeyDownActions } from '@/hooks/useKeyDownActions';
-import { TRANSLATED_LANGS, TRANSLATOR_LANGS } from '@/services/constants';
+import {
+  TRANSLATED_LANGS,
+  TRANSLATOR_LANGS,
+  DEFAULT_TRANSLATION_SETTINGS,
+} from '@/services/constants';
 import { ConvertChineseVariant } from '@/types/book';
 import { SettingsPanelPanelProp } from './SettingsDialog';
 import { getDirFromLanguage } from '@/utils/rtl';
@@ -33,8 +37,14 @@ const LangPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
   const _ = useTranslation();
   const { token } = useAuth();
   const { envConfig } = useEnv();
-  const { settings, applyUILanguage, activeSettingsItemId, setActiveSettingsItemId } =
-    useSettingsStore();
+  const {
+    settings,
+    setSettings,
+    saveSettings,
+    applyUILanguage,
+    activeSettingsItemId,
+    setActiveSettingsItemId,
+  } = useSettingsStore();
   const { getView, getViewSettings, setViewSettings, recreateViewer } = useReaderStore();
   const view = getView(bookKey);
   const viewSettings = getViewSettings(bookKey) || settings.globalViewSettings;
@@ -53,6 +63,44 @@ const LangPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
   );
   const [showCustomDictionaries, setShowCustomDictionaries] = useState(false);
   const [showWordLens, setShowWordLens] = useState(false);
+
+  // Translation provider enablement + DeepL key live in global system settings
+  // (not per-book view settings), so they persist via setSettings/saveSettings.
+  const translation = settings.translation ?? DEFAULT_TRANSLATION_SETTINGS;
+  const [providerEnabled, setProviderEnabled] = useState(translation.providers);
+  const [deeplApiKey, setDeeplApiKey] = useState(translation.deeplApiKey);
+  const [litellmEnabled, setLitellmEnabled] = useState(!!settings.litellm?.enabled);
+
+  const persistTranslation = (nextProviders: typeof providerEnabled, nextDeeplKey: string) => {
+    const newSettings = {
+      ...settings,
+      translation: { providers: nextProviders, deeplApiKey: nextDeeplKey },
+    };
+    setSettings(newSettings);
+    saveSettings(envConfig, newSettings);
+  };
+
+  const toggleProvider = (name: keyof typeof providerEnabled) => {
+    const next = { ...providerEnabled, [name]: !providerEnabled[name] };
+    setProviderEnabled(next);
+    persistTranslation(next, deeplApiKey);
+  };
+
+  const handleDeeplKeyChange = (value: string) => {
+    setDeeplApiKey(value);
+    persistTranslation(providerEnabled, value);
+  };
+
+  const toggleLitellm = () => {
+    const next = !litellmEnabled;
+    setLitellmEnabled(next);
+    const newSettings = {
+      ...settings,
+      litellm: { ...settings.litellm, enabled: next },
+    };
+    setSettings(newSettings);
+    saveSettings(envConfig, newSettings);
+  };
 
   // Android Back / Esc: when a sub-page is open, intercept and step back to the
   // language list instead of letting <Dialog>'s listener close the whole
@@ -369,6 +417,51 @@ const LangPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
             options={getLangOptions(TRANSLATOR_LANGS)}
           />
         </SettingsRow>
+      </BoxedList>
+
+      <BoxedList
+        title={_('Translation Providers')}
+        data-setting-id='settings.language.translationProviders'
+      >
+        <SettingsSwitchRow
+          label={_('Google Translate')}
+          checked={providerEnabled.google}
+          onChange={() => toggleProvider('google')}
+        />
+        <SettingsSwitchRow
+          label={_('Azure Translator')}
+          checked={providerEnabled.azure}
+          onChange={() => toggleProvider('azure')}
+        />
+        <SettingsSwitchRow
+          label={_('Yandex Translate')}
+          checked={providerEnabled.yandex}
+          onChange={() => toggleProvider('yandex')}
+        />
+        <SettingsSwitchRow
+          label={_('DeepL')}
+          description={_(
+            'Uses your own DeepL API key. Free keys ending in “:fx” use the free endpoint.',
+          )}
+          checked={providerEnabled.deepl}
+          onChange={() => toggleProvider('deepl')}
+        />
+        <SettingsRow label={_('DeepL API Key')}>
+          <input
+            type='password'
+            placeholder={_('Your DeepL API key')}
+            className='input h-9 max-w-[60%] rounded-md !border-0 !bg-transparent !pe-3 !ps-2 text-end text-sm hover:!bg-transparent focus:!border-0 focus:!bg-transparent focus:!shadow-none focus:!outline-none focus:!ring-0'
+            value={deeplApiKey}
+            onChange={(e) => handleDeeplKeyChange(e.target.value)}
+            autoComplete='off'
+          />
+        </SettingsRow>
+        <SettingsSwitchRow
+          label={_('LiteLLM (self-hosted AI)')}
+          description={_('Configure the endpoint under Integrations → AI (LiteLLM).')}
+          checked={litellmEnabled}
+          onChange={toggleLitellm}
+        />
       </BoxedList>
 
       {(isCJKEnv() || view?.language.isCJK) && (

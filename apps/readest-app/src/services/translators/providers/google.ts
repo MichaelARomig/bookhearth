@@ -3,10 +3,14 @@ import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { isTauriAppPlatform } from '@/services/environment';
 import { normalizeToShortLang } from '@/utils/lang';
 import { TranslationProvider } from '../types';
+import { isTranslationProviderEnabled } from '../enablement';
 
 export const googleProvider: TranslationProvider = {
   name: 'google',
   label: _('Google Translate'),
+  get disabled() {
+    return !isTranslationProviderEnabled('google');
+  },
   translate: async (text: string[], sourceLang: string, targetLang: string): Promise<string[]> => {
     if (!text.length) return [];
 

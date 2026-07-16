@@ -29,6 +29,7 @@ import {
   GoogleDriveSettings,
   S3Settings,
   LiteLLMSettings,
+  TranslationSettings,
 } from '@/types/settings';
 import { UserStorageQuota, UserDailyTranslationQuota } from '@/types/quota';
 import { getDefaultMaxBlockSize, getDefaultMaxInlineSize } from '@/utils/config';
@@ -146,6 +147,19 @@ export const DEFAULT_LITELLM_SETTINGS = {
   timeoutMs: 30000,
 } as LiteLLMSettings;
 
+export const DEFAULT_TRANSLATION_SETTINGS = {
+  // Google/Azure/Yandex are keyless (or self-tokenizing) web providers, so they
+  // are on out of the box. DeepL is off until the user enters their own key.
+  // LiteLLM is not listed — it is gated by `litellm.enabled` + a base URL.
+  providers: {
+    google: true,
+    azure: true,
+    yandex: true,
+    deepl: false,
+  },
+  deeplApiKey: '',
+} as TranslationSettings;
+
 export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   keepLogin: false,
   autoUpload: false,
@@ -205,6 +219,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   googleDrive: DEFAULT_GOOGLE_DRIVE_SETTINGS,
   s3: DEFAULT_S3_SETTINGS,
   litellm: DEFAULT_LITELLM_SETTINGS,
+  translation: DEFAULT_TRANSLATION_SETTINGS,
   aiSettings: DEFAULT_AI_SETTINGS,
 
   lastSyncedAtBooks: 0,
@@ -253,7 +268,7 @@ export const DEFAULT_READSETTINGS: ReadSettings = {
   isNotebookPinned: false,
   notebookActiveTab: 'notes',
   autohideCursor: true,
-  translationProvider: 'litellm',
+  translationProvider: 'google',
   translateTargetLang: 'EN',
   wordLensAutoDownload: true,
 
@@ -432,7 +447,7 @@ export const DEFAULT_TTS_CONFIG: TTSConfig = {
 
 export const DEFAULT_TRANSLATOR_CONFIG: TranslatorConfig = {
   translationEnabled: false,
-  translationProvider: 'litellm',
+  translationProvider: 'google',
   translateTargetLang: '',
   showTranslateSource: true,
   ttsReadAloudText: 'both',

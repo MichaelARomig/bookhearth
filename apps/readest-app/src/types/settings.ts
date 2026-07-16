@@ -228,6 +228,29 @@ export interface LiteLLMSettings {
 }
 
 /**
+ * Translation provider configuration (SPEC §6.2). `providers` holds per-provider
+ * user enablement — a provider that is disabled here never appears as selectable
+ * and is skipped by the auto-fallback in `useTranslator`. Missing keys fall back
+ * to {@link DEFAULT_TRANSLATION_SETTINGS} (Google/Azure/Yandex on, DeepL off).
+ * LiteLLM enablement is not listed here — it is gated by `litellm.enabled` +
+ * a configured base URL, since that endpoint is shared with TTS.
+ *
+ * `deeplApiKey` is the user's own DeepL Developer key (free keys end in `:fx`,
+ * which selects the `api-free.deepl.com` endpoint; any other key uses the Pro
+ * `api.deepl.com` endpoint). It is a secret: excluded from settings exports and
+ * never logged. No Readest account or proxy is involved.
+ */
+export interface TranslationSettings {
+  providers: {
+    google: boolean;
+    azure: boolean;
+    yandex: boolean;
+    deepl: boolean;
+  };
+  deeplApiKey: string;
+}
+
+/**
  * User-facing sync categories. 'progress' gates the existing book-config
  * (reading progress) sync, 'note' gates annotations, 'book' gates book
  * binaries + metadata, 'dictionary' gates the imported-dictionary replica
@@ -395,6 +418,7 @@ export interface SystemSettings {
   googleDrive: GoogleDriveSettings;
   s3: S3Settings;
   litellm: LiteLLMSettings;
+  translation: TranslationSettings;
 
   aiSettings: AISettings;
   /**

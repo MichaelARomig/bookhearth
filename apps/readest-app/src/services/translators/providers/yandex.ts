@@ -3,6 +3,7 @@ import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { isTauriAppPlatform } from '@/services/environment';
 import { normalizeToShortLang } from '@/utils/lang';
 import { TranslationProvider } from '../types';
+import { isTranslationProviderEnabled } from '../enablement';
 
 /**
  * Based on https://translate.toil.cc/v2/docs API specification
@@ -49,10 +50,12 @@ export const yandexProvider: TranslationProvider = {
   name: 'yandex',
   label: _('Yandex Translate'),
   authRequired: false,
-  // The upstream translate.toil.cc relay is currently down. Keep the
-  // implementation in tree so we can re-enable it simply by flipping this
-  // flag to `false` (or deleting the line) once the service is healthy.
-  disabled: true,
+  // Availability follows the user's Translation Providers toggle. (The upstream
+  // translate.toil.cc relay has been flaky in the past; if it is unreachable the
+  // request surfaces a clear error rather than silently disabling the provider.)
+  get disabled() {
+    return !isTranslationProviderEnabled('yandex');
+  },
   translate: async (texts: string[], sourceLang: string, targetLang: string): Promise<string[]> => {
     if (!texts.length) return [];
 
