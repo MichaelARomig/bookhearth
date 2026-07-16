@@ -18,6 +18,26 @@
       into the client's `danger` fetch option) and `warnOnPlainHttp` (warning
       **off by default**; when on, warns on `http://`). Tests for TLS injection.
 
+## Backlog — "Send to Bookhearth" (web clipping) needs work
+
+- [ ] The **Send-to** feature (browser extension + inbound email → library) is
+      **hidden in the app for now**: its Integrations settings entry was removed
+      (`IntegrationsPanel` — the `'send'` sub-page, its `IntegrationRow`, and the
+      `requestedSubPage === 'send'` path). The whole flow is coupled to the hosted
+      backend that the local-first build strips: the extension's auth-bridge reads
+      the session from `web.readest.com` and uploads go to the Supabase/R2-backed
+      send-inbox API (`src/pages/api/send/*`, `workers/send-email`). It is
+      non-functional without that backend.
+      - Left in place but unsurfaced (not deleted): `SendToReadestForm`, the
+        `/send` route (`src/app/send/page.tsx`), `useInboxDrainer`, and the
+        `apps/readest-app/extensions/send-to-readest` browser extension. The
+        extension is still branded "Send to Readest" — rebranding it is **out of
+        scope** for the current work.
+      - To revive: either stand up a self-hosted inbox backend and repoint the
+        extension/auth-bridge, or replace it with a purely local capture path
+        (e.g. share-sheet → direct import) needing no server. Then re-add the
+        Integrations entry and rebrand the extension → Bookhearth.
+
 ## Backlog — app icons + branding
 
 - [ ] Replace the app icons with the new set in `IconKitchen-Output/` (top level

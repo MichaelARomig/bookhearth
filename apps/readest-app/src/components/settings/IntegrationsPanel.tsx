@@ -6,7 +6,6 @@ import {
   RiRssLine,
   RiBookReadLine,
   RiBook3Line,
-  RiSendPlaneLine,
   RiCloudLine,
   RiDatabase2Line,
   RiGoogleLine,
@@ -25,7 +24,6 @@ import { getGoogleWebClientId } from '@/services/sync/providers/gdrive/buildGoog
 import KOSyncForm from './integrations/KOSyncForm';
 import ReadwiseForm from './integrations/ReadwiseForm';
 import HardcoverForm from './integrations/HardcoverForm';
-import SendToReadestForm from './integrations/SendToReadestForm';
 import WebDAVForm from './integrations/WebDAVForm';
 import GoogleDriveForm from './integrations/GoogleDriveForm';
 import S3Form from './integrations/S3Form';
@@ -49,7 +47,6 @@ type SubPage =
   | 'readwise'
   | 'hardcover'
   | 'opds'
-  | 'send'
   | 'litellm'
   | null;
 
@@ -83,7 +80,6 @@ const IntegrationsPanel: React.FC = () => {
       requestedSubPage === 'readwise' ||
       requestedSubPage === 'hardcover' ||
       requestedSubPage === 'opds' ||
-      requestedSubPage === 'send' ||
       requestedSubPage === 'litellm'
     ) {
       setSubPage(requestedSubPage);
@@ -242,14 +238,6 @@ const IntegrationsPanel: React.FC = () => {
           onBack={() => setSubPage(null)}
         />
         <CatalogManager inSubPage />
-      </div>
-    );
-  }
-
-  if (subPage === 'send') {
-    return (
-      <div className='my-4 w-full'>
-        <SendToReadestForm onBack={() => setSubPage(null)} />
       </div>
     );
   }
@@ -417,12 +405,6 @@ const IntegrationsPanel: React.FC = () => {
               title={getCatalogUiLabel(_, appService?.isOnlineCatalogsAccessible)}
               status={opdsStatus}
               onClick={() => setSubPage('opds')}
-            />
-            <IntegrationRow
-              icon={RiSendPlaneLine}
-              title={_('Send to Bookhearth')}
-              status={_('Email books to your library')}
-              onClick={() => setSubPage('send')}
             />
           </div>
         </div>
