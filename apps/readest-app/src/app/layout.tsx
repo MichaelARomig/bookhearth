@@ -8,28 +8,28 @@ import Providers from '@/components/Providers';
 import '../styles/globals.css';
 
 const url = 'https://web.readest.com/';
-const title = 'Readest — Where You Read, Digest and Get Insight';
+const title = 'Bookhearth — Where You Read, Digest and Get Insight';
 const description =
-  'Discover Readest, the ultimate online ebook reader for immersive and organized reading. ' +
-  'Enjoy seamless access to your digital library, powerful tools for highlighting, bookmarking, ' +
-  'and note-taking, and support for multiple book views. ' +
-  'Perfect for deep reading, analysis, and understanding. Explore now!';
+  'Bookhearth is a local-first ebook reader for immersive and organized reading. ' +
+  'Keep your digital library on your own devices, with powerful tools for highlighting, ' +
+  'bookmarking, and note-taking, support for multiple book views, and sync through ' +
+  'services you control. Perfect for deep reading, analysis, and understanding.';
 const previewImage = 'https://cdn.readest.com/images/open_graph_preview_read_now.png';
 
 export const metadata: Metadata = {
   metadataBase: new URL(url),
   title: {
     default: title,
-    template: '%s | Readest',
+    template: '%s | Bookhearth',
   },
   description,
   generator: 'Next.js',
   manifest: '/manifest.json',
-  keywords: ['epub', 'pdf', 'ebook', 'reader', 'readest', 'pwa'],
+  keywords: ['epub', 'pdf', 'ebook', 'reader', 'bookhearth', 'pwa'],
   authors: [
     {
-      name: 'readest',
-      url: 'https://github.com/readest/readest',
+      name: 'bookhearth',
+      url: 'https://github.com/MichaelARomig/bookhearth',
     },
   ],
   icons: {
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: 'Readest',
+    title: 'Bookhearth',
     statusBarStyle: 'default',
   },
   openGraph: {

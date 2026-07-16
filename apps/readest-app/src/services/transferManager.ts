@@ -88,7 +88,7 @@ class TransferManager {
       store.setTransferStatus(t.id, 'cancelled', undefined, 'policy');
     });
     console.info(
-      `[cloudSync] cancelled ${gated.length} pending Readest Cloud upload(s): third-party provider selected`,
+      `[cloudSync] cancelled ${gated.length} pending cloud upload(s): third-party provider selected`,
     );
     this.persistQueue();
   }

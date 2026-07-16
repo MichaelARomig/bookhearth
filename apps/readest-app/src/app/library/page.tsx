@@ -986,7 +986,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         eventDispatcher.dispatch('toast', {
           type: 'info',
           timeout: 5000,
-          message: _('Uploads to Readest Cloud are paused while {{provider}} sync is selected', {
+          message: _('Cloud uploads are paused while {{provider}} sync is selected', {
             provider: cloudProviderDisplayName(provider),
           }),
         });

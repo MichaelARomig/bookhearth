@@ -90,7 +90,7 @@ const SendToReadestForm: React.FC<SendToReadestFormProps> = ({ onBack }) => {
       setSenders(sendersData.senders);
       setActivity(inboxData.items);
     } catch {
-      toast(_('Could not load Send to Readest settings'), 'error');
+      toast(_('Could not load Send to Bookhearth settings'), 'error');
     } finally {
       setLoading(false);
     }
@@ -189,7 +189,7 @@ const SendToReadestForm: React.FC<SendToReadestFormProps> = ({ onBack }) => {
     <div className='my-4 w-full'>
       <SubPageHeader
         parentLabel={_('Integrations')}
-        currentLabel={_('Send to Readest')}
+        currentLabel={_('Send to Bookhearth')}
         description={_('Email books and articles straight into your library.')}
         onBack={onBack}
       />

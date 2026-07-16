@@ -44,7 +44,7 @@ export const cloudProviderDisplayName = (kind: CloudSyncProviderKind): string =>
       ? 'WebDAV'
       : kind === 's3'
         ? 'S3'
-        : 'Readest Cloud';
+        : 'Built-in Cloud';
 
 export const getCloudSyncProvider = (
   settings: SystemSettings | null | undefined,

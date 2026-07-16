@@ -185,6 +185,6 @@ describe('cloudProviderDisplayName', () => {
     expect(cloudProviderDisplayName('webdav')).toBe('WebDAV');
     expect(cloudProviderDisplayName('gdrive')).toBe('Google Drive');
     expect(cloudProviderDisplayName('s3')).toBe('S3');
-    expect(cloudProviderDisplayName('readest')).toBe('Readest Cloud');
+    expect(cloudProviderDisplayName('readest')).toBe('Built-in Cloud');
   });
 });

@@ -849,7 +849,7 @@ export class NativeAppService extends BaseAppService {
         srcPath,
         fileName: filename,
         mimeType,
-        albumName: 'Readest',
+        albumName: 'Bookhearth',
       });
       return res.success;
     } catch (error) {
