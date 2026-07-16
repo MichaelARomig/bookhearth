@@ -7,7 +7,6 @@ import { checkForAppUpdates, checkAppReleaseNotes } from '@/helpers/updater';
 import { parseWebViewInfo } from '@/utils/ua';
 import { getAppVersion } from '@/utils/version';
 import SupportLinks from './SupportLinks';
-import LegalLinks from './LegalLinks';
 import Dialog from './Dialog';
 import Link from './Link';
 
@@ -154,8 +153,6 @@ export const AboutWindow = () => {
               </Link>
               .
             </p>
-
-            <LegalLinks />
           </div>
           <SupportLinks />
         </div>
