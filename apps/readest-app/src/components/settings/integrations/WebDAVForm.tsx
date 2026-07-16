@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import React, { useState } from 'react';
-import { MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import { v4 as uuidv4 } from 'uuid';
+import { MdVisibility, MdVisibilityOff, MdAdd, MdDeleteOutline } from 'react-icons/md';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation, type TranslationFunc } from '@/hooks/useTranslation';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -11,7 +12,18 @@ import {
   WebDAVConnectResult,
 } from '@/services/sync/providers/webdav/client';
 import { buildWebDAVConnectSettings } from '@/services/sync/providers/webdav/connectSettings';
-import { SectionTitle } from '../primitives';
+import {
+  listProfiles,
+  getActiveProfileId,
+  addProfile,
+  setActiveProfile,
+  renameProfile,
+  removeProfile,
+  applyConnectionToActive,
+} from '@/services/sync/providers/webdav/profiles';
+import { DEFAULT_WEBDAV_SETTINGS } from '@/services/constants';
+import type { WebDAVSettings } from '@/types/settings';
+import { SectionTitle, SettingsSwitchRow } from '../primitives';
 import FileSyncForm from './FileSyncForm';
 import WebDAVBrowsePane from './WebDAVBrowsePane';
 import { persistActiveCloudProvider } from './cloudSync';
@@ -52,7 +64,7 @@ const WebDAVForm: React.FC = () => {
   const { settings, setSettings, saveSettings } = useSettingsStore();
   const { envConfig } = useEnv();
 
-  const stored = settings.webdav;
+  const stored = settings.webdav ?? DEFAULT_WEBDAV_SETTINGS;
   const isActive = !!stored?.enabled;
 
   const [url, setUrl] = useState(stored?.serverUrl || '');
@@ -62,11 +74,86 @@ const WebDAVForm: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Multiple named servers. `profiles`/`activeId` come from the persisted
+  // settings (with legacy-singleton migration handled by listProfiles); the
+  // connection inputs above are the working copy of the active profile.
+  const profiles = listProfiles(stored);
+  const activeId = getActiveProfileId(stored);
+  const [allowInsecureTls, setAllowInsecureTls] = useState(stored?.allowInsecureTls !== false);
+  const [warnOnPlainHttp, setWarnOnPlainHttp] = useState(!!stored?.warnOnPlainHttp);
+  const [profileName, setProfileName] = useState(
+    profiles.find((p) => p.id === activeId)?.name ?? '',
+  );
+  const isPlainHttp = url.trim().toLowerCase().startsWith('http://');
+
+  const persistWebdavBlock = async (webdav: WebDAVSettings) => {
+    const latest = useSettingsStore.getState().settings;
+    const next = { ...latest, webdav };
+    setSettings(next);
+    await saveSettings(envConfig, next);
+  };
+
+  const loadFields = (profileId: string, block: WebDAVSettings) => {
+    const p = (block.profiles ?? []).find((x) => x.id === profileId);
+    setUrl(p?.serverUrl ?? '');
+    setUsername(p?.username ?? '');
+    setPassword(p?.password ?? '');
+    setRootPath(p?.rootPath || '/');
+    setProfileName(p?.name ?? '');
+  };
+
+  // Save the current input edits into the active profile before any switch so
+  // in-progress (un-connected) edits aren't lost.
+  const captureCurrent = (): WebDAVSettings =>
+    applyConnectionToActive(stored, { serverUrl: url, username, password, rootPath });
+
+  const handleSwitchProfile = async (id: string) => {
+    if (id === activeId) return;
+    const next = setActiveProfile(captureCurrent(), id);
+    await persistWebdavBlock(next);
+    loadFields(id, next);
+  };
+
+  const handleAddProfile = async () => {
+    const id = uuidv4();
+    const name = `${_('Server')} ${profiles.length + 1}`;
+    const next = addProfile(captureCurrent(), id, name);
+    await persistWebdavBlock(next);
+    loadFields(id, next);
+  };
+
+  const handleRenameActive = async (name: string) => {
+    if (!activeId) return;
+    await persistWebdavBlock(renameProfile(captureCurrent(), activeId, name));
+  };
+
+  const handleRemoveActive = async () => {
+    if (!activeId) return;
+    const next = removeProfile(captureCurrent(), activeId);
+    await persistWebdavBlock(next);
+    loadFields(getActiveProfileId(next), next);
+  };
+
+  const toggleTls = async () => {
+    const value = !allowInsecureTls;
+    setAllowInsecureTls(value);
+    await persistWebdavBlock({ ...stored, allowInsecureTls: value });
+  };
+
+  const toggleWarnHttp = async () => {
+    const value = !warnOnPlainHttp;
+    setWarnOnPlainHttp(value);
+    await persistWebdavBlock({ ...stored, warnOnPlainHttp: value });
+  };
+
   const handleConnect = async () => {
     if (!url || !username) return;
     setIsConnecting(true);
     const normalizedRoot = normalizeRootPath(rootPath);
-    const result = await checkConnection({ serverUrl: url, username, password }, normalizedRoot);
+    const result = await checkConnection(
+      { serverUrl: url, username, password, allowInsecureTls },
+      normalizedRoot,
+    );
     if (!result.success) {
       eventDispatcher.dispatch('toast', {
         type: 'error',
@@ -79,14 +166,12 @@ const WebDAVForm: React.FC = () => {
     // make WebDAV the single active cloud provider (turns Google Drive off).
     // persistActiveCloudProvider owns activation, persistence, and the
     // cross-window provider broadcast.
+    const connection = { serverUrl: url, username, password, rootPath: normalizedRoot };
     await persistActiveCloudProvider(envConfig, 'webdav', (s) => ({
       ...s,
-      webdav: buildWebDAVConnectSettings(s.webdav, {
-        serverUrl: url,
-        username,
-        password,
-        rootPath: normalizedRoot,
-      }),
+      // buildWebDAVConnectSettings preserves deviceId / sub-toggles;
+      // applyConnectionToActive mirrors the connection into the active profile.
+      webdav: applyConnectionToActive(buildWebDAVConnectSettings(s.webdav, connection), connection),
     }));
     setIsConnecting(false);
     eventDispatcher.dispatch('toast', { type: 'info', message: _('Connected') });
@@ -140,6 +225,60 @@ const WebDAVForm: React.FC = () => {
         handleConnect();
       }}
     >
+      <div className='space-y-1.5'>
+        <div className='flex items-center justify-between'>
+          <SectionTitle as='span' className='block'>
+            {_('Saved Servers')}
+          </SectionTitle>
+          <button
+            type='button'
+            onClick={handleAddProfile}
+            className='eink-bordered flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium'
+          >
+            <MdAdd className='h-4 w-4' />
+            {_('Add server')}
+          </button>
+        </div>
+        {profiles.length > 1 && (
+          <select
+            aria-label={_('Saved Servers')}
+            className='select select-bordered eink-bordered h-11 w-full text-sm focus:outline-none'
+            value={activeId}
+            onChange={(e) => handleSwitchProfile(e.target.value)}
+          >
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {(profiles.length > 0 || !!activeId) && (
+          <div className='flex items-center gap-2'>
+            <input
+              type='text'
+              aria-label={_('Server name')}
+              placeholder={_('Server name')}
+              className='input input-bordered eink-bordered h-11 w-full text-sm focus:outline-none'
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+              onBlur={() => handleRenameActive(profileName)}
+            />
+            {profiles.length > 1 && (
+              <button
+                type='button'
+                onClick={handleRemoveActive}
+                aria-label={_('Remove server')}
+                title={_('Remove server')}
+                className='eink-bordered text-error hover:bg-error/10 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md'
+              >
+                <MdDeleteOutline className='h-5 w-5' />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className='space-y-1.5'>
         <SectionTitle as='label' htmlFor='webdav-server-url' className='block'>
           {_('Server URL')}
@@ -222,6 +361,31 @@ const WebDAVForm: React.FC = () => {
           onChange={(e) => setRootPath(e.target.value)}
         />
       </div>
+
+      <div className='card eink-bordered border-base-200 bg-base-100 divide-base-200 divide-y overflow-hidden border'>
+        <SettingsSwitchRow
+          label={_('Allow self-signed / insecure TLS')}
+          description={_(
+            'On by default for LAN/self-hosted servers. Turn off to require a valid certificate.',
+          )}
+          checked={allowInsecureTls}
+          onChange={toggleTls}
+        />
+        <SettingsSwitchRow
+          label={_('Warn about unencrypted HTTP')}
+          description={_('Off by default. Turn on to be warned when a server URL uses http://.')}
+          checked={warnOnPlainHttp}
+          onChange={toggleWarnHttp}
+        />
+      </div>
+
+      {warnOnPlainHttp && isPlainHttp && (
+        <p className='text-warning text-xs leading-relaxed'>
+          {_(
+            'This server uses plain HTTP. Your username, password, and content may be transmitted without encryption.',
+          )}
+        </p>
+      )}
 
       <div className='flex justify-end pt-1'>
         <button

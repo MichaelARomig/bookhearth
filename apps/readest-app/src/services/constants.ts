@@ -100,6 +100,12 @@ export const DEFAULT_WEBDAV_SETTINGS = {
   username: '',
   password: '',
   rootPath: '/',
+  profiles: [],
+  activeProfileId: '',
+  // Self-signed / invalid certs allowed by default (LAN/self-hosted convenience);
+  // plain-HTTP warning off by default. Both are user-flippable in the WebDAV form.
+  allowInsecureTls: true,
+  warnOnPlainHttp: false,
   syncProgress: true,
   syncNotes: true,
   syncBooks: false,

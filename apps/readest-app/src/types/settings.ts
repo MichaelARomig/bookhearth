@@ -113,12 +113,43 @@ export interface HardcoverSettings {
  */
 export type WebDAVBrowseSortByType = 'name' | 'modified' | 'created' | 'size';
 
-export interface WebDAVSettings {
-  enabled: boolean;
+/**
+ * A single saved WebDAV server. Users can define several; one is active at a
+ * time (`WebDAVSettings.activeProfileId`), and the active profile's connection
+ * is mirrored onto the top-level `serverUrl`/`username`/`password`/`rootPath`
+ * fields so the sync engine and client keep reading one canonical connection
+ * with no changes. `lastSyncedAt` is stored per profile so switching servers
+ * doesn't carry a stale sync cursor from another server.
+ */
+export interface WebDAVProfile {
+  id: string;
+  name: string;
   serverUrl: string;
   username: string;
   password: string;
   rootPath: string;
+  lastSyncedAt?: number;
+}
+
+export interface WebDAVSettings {
+  enabled: boolean;
+  // Active connection (mirror of the active profile). The sync engine + client
+  // read these; profile management keeps them in sync with `profiles`.
+  serverUrl: string;
+  username: string;
+  password: string;
+  rootPath: string;
+  // Saved servers. When absent/empty the top-level connection above is treated
+  // as an implicit single profile (migrated on first use of the profile UI).
+  profiles?: WebDAVProfile[];
+  activeProfileId?: string;
+  // TLS/HTTP security (SPEC §5.1). `allowInsecureTls` defaults to true (accept
+  // self-signed / invalid certs — convenient for LAN/self-hosted servers); set
+  // false to enforce strict TLS. `warnOnPlainHttp` defaults to false; when true
+  // the UI warns that an `http://` server transmits credentials/content
+  // unencrypted.
+  allowInsecureTls?: boolean;
+  warnOnPlainHttp?: boolean;
   // Browser sort preference, persisted so a chosen "recent first" order
   // survives across sessions. Both optional: absent => name/ascending,
   // matching the pre-feature default (no migration needed).

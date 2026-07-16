@@ -44,6 +44,13 @@ export interface WebDAVConfig {
   serverUrl: string;
   username: string;
   password: string;
+  /**
+   * When true (the default when unset), accept self-signed / invalid TLS certs
+   * on native — convenient for LAN / self-hosted servers. Set to `false` to
+   * enforce strict certificate validation (SPEC §5.1). Only affects the Tauri
+   * (reqwest) transport; the web build always uses the browser's TLS stack.
+   */
+  allowInsecureTls?: boolean;
 }
 
 export type WebDAVConnectErrorCode =
@@ -185,11 +192,19 @@ const fetchWithTimeout = async (
   url: string,
   init: RequestInit,
   timeoutMs: number,
+  allowInsecureTls?: boolean,
 ): Promise<Response> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // Accept self-signed / invalid certs on native by default (allowInsecureTls
+  // undefined or true); the option is inert on the web fetch. Set false in
+  // settings to enforce strict TLS. Mirrors the OPDS/KOSync clients' `danger`.
+  const tls =
+    isTauriAppPlatform() && allowInsecureTls !== false
+      ? { danger: { acceptInvalidCerts: true, acceptInvalidHostnames: true } }
+      : {};
   try {
-    return await fetchFn(url, { ...init, signal: controller.signal });
+    return await fetchFn(url, { ...init, ...tls, signal: controller.signal } as RequestInit);
   } catch (e) {
     if (controller.signal.aborted) throw new Error('Request timed out');
     throw e;
@@ -315,6 +330,7 @@ export const checkConnection = async (
         body: PROPFIND_BODY,
       },
       METADATA_TIMEOUT_MS,
+      config.allowInsecureTls,
     );
     if (response.status === 207 || response.status === 200) {
       return { success: true, status: response.status };
@@ -366,6 +382,7 @@ export const listDirectory = async (
         body: PROPFIND_BODY,
       },
       METADATA_TIMEOUT_MS,
+      config.allowInsecureTls,
     );
   } catch (e) {
     throw new WebDAVRequestError((e as Error).message || 'Network error', undefined, 'NETWORK');
@@ -464,6 +481,7 @@ const requestWithMethod = async (
       url,
       { method, headers, body: init.body ?? null },
       timeoutForMethod(method),
+      config.allowInsecureTls,
     );
   } catch (e) {
     throw new WebDAVRequestError((e as Error).message || 'Network error', undefined, 'NETWORK');
