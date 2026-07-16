@@ -70,6 +70,7 @@ export const createWebDAVProvider = (settings: WebDAVSettings): FileSyncProvider
     serverUrl: settings.serverUrl,
     username: settings.username,
     password: settings.password,
+    allowInsecureTls: settings.allowInsecureTls,
   };
 
   const provider: FileSyncProvider = {

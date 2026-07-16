@@ -1,5 +1,33 @@
 # TODOS
 
+## Post-detach feature work — Bookhearth (2026-07-16)
+
+- [x] Translation providers: restored **DeepL** as a user-keyed provider (own
+      key; `:fx` → free endpoint, else Pro; direct, no Readest proxy). Added
+      per-provider enablement (`settings.translation`) with a "Translation
+      Providers" settings section: Google/Azure/Yandex on by default, DeepL off
+      until keyed, LiteLLM via its own endpoint gate. Default selected provider
+      is now `google`. Tests + committed/pushed (488683d6).
+- [x] WebDAV **multiple named server profiles**: `WebDAVProfile[]` +
+      `activeProfileId`; active profile mirrored onto the top-level connection
+      so the sync engine/client are unchanged. Pure helper
+      (`providers/webdav/profiles.ts`) + tests; WebDAVForm gets a Saved Servers
+      selector (add/rename/remove/switch), with legacy-singleton migration.
+- [x] WebDAV **TLS/HTTP security settings**: `allowInsecureTls` (self-signed/
+      insecure certs **allowed by default**; toggle off for strict TLS — wired
+      into the client's `danger` fetch option) and `warnOnPlainHttp` (warning
+      **off by default**; when on, warns on `http://`). Tests for TLS injection.
+
+## Backlog — iOS/iPad UI verification (Xcode)
+
+- [ ] Run `pnpm tauri ios build` (and/or launch the iOS simulator) to confirm
+      the app compiles + renders on iPhone 15 Pro Max / iPad Pro, then visually
+      check the new/changed settings surfaces on device: Integrations → AI
+      (LiteLLM), Language → Translation Providers (+ DeepL key), WebDAV Saved
+      Servers + Security toggles. Adjust element layout/formatting for the
+      narrower iPhone width where needed. (User has Xcode running; do this after
+      the folder rename to `bookhearth`.)
+
 ## Build + verification (2026-07-10)
 
 - [x] Frontend production build: `pnpm build` (Next.js → Tauri export) compiles,
