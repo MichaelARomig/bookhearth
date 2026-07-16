@@ -134,7 +134,7 @@ targets:
     info:
       path: ShareExtension/Info.plist
       properties:
-        CFBundleDisplayName: Readest
+        CFBundleDisplayName: Bookhearth
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -187,7 +187,7 @@ targets:
     info:
       path: ReadestWidget/Info.plist
       properties:
-        CFBundleDisplayName: Readest
+        CFBundleDisplayName: Bookhearth
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

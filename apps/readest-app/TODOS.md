@@ -82,9 +82,34 @@
 
 ## Backlog — iOS/iPad UI verification (Xcode)
 
-- [ ] Run `pnpm tauri ios build` (and/or launch the iOS simulator) to confirm
-      the app compiles + renders on iPhone 15 Pro Max / iPad Pro, then visually
-      check the new/changed settings surfaces on device: Integrations → AI
+- [x] **iOS simulator build is GREEN (2026-07-16):**
+      `pnpm exec tauri ios build --target aarch64-sim` builds
+      `gen/apple/build/arm64-sim/Bookhearth.app` on Xcode 26.6 / iOS 26.5 SDK.
+      Required fixes/prereqs discovered:
+      - **Committed the missing main-app `Info.plist`** (`gen/apple/Readest_iOS/
+        Info.plist`, force-added past the `src-tauri/gen` gitignore). It was a
+        hand-tuned, gitignored, never-committed file, so a clean clone could not
+        build iOS at all — pre-existing gap, not a rename side-effect. Built from
+        `src-tauri/Info.plist` + standard iOS keys + `readest://`/Google-OAuth URL
+        schemes + 34 locales; CFBundleDisplayName = Bookhearth.
+      - Rebranded the Share Extension + Widget `CFBundleDisplayName` → Bookhearth
+        (user-facing in the share sheet / widget gallery), in `project.yml` + the
+        tracked generated plists.
+      - Toolchain prereqs (installed on this machine, not committable): full Xcode
+        selected (`sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`),
+        iOS Rust targets (`rustup target add aarch64-apple-ios{,-sim} x86_64-apple-ios`),
+        `libimobiledevice`, and CocoaPods (`brew install cocoapods`).
+      - **PATH gotcha:** Homebrew's `rust` puts `/opt/homebrew/bin/cargo` ahead of
+        rustup's `~/.cargo/bin/cargo`; Homebrew rust has no iOS std → build fails
+        with "can't find crate for std (aarch64-apple-ios-sim)". Fix: `brew unlink
+        rust` or put `~/.cargo/bin` first on PATH (worked around per-build with a
+        PATH prefix).
+      - Follow-up (App Store only): extension `CFBundleShortVersionString` is `1.0`
+        vs the app's `0.11.18` — Xcode warns they must match; align before store
+        submission.
+- [ ] Visually verify on device/simulator (this still needs a human): confirm
+      the app renders on iPhone 15 Pro Max / iPad Pro, then check the new/changed
+      settings surfaces on device: Integrations → AI
       (LiteLLM), Language → Translation Providers (+ DeepL key), WebDAV Saved
       Servers + Security toggles. Adjust element layout/formatting for the
       narrower iPhone width where needed. (User has Xcode running; do this after
