@@ -18,6 +18,26 @@
       into the client's `danger` fetch option) and `warnOnPlainHttp` (warning
       **off by default**; when on, warns on `http://`). Tests for TLS injection.
 
+## Backlog — app icons + branding
+
+- [ ] Replace the app icons with the new set in `IconKitchen-Output/` (top level
+      of the `ebook`/repo dir).
+      - Regenerate native icons: `pnpm tauri icon <source>` using the 1024px
+        master `IconKitchen-Output/ios/AppIcon~ios-marketing.png` (falls back to
+        `android/play_store_512.png` at 512). This rewrites
+        `apps/readest-app/src-tauri/icons/*` (desktop `.ico`/`.icns`/`.png`,
+        Android mipmaps, iOS AppIcon set) — commit the regenerated files.
+      - Web/PWA icons are NOT covered by `tauri icon`: copy
+        `IconKitchen-Output/web/*` (favicon.ico, apple-touch-icon.png,
+        icon-192/512[-maskable].png) into the app's `public/` + update the PWA
+        manifest icon references if needed.
+      - Update the README logo: `apps/readest-app/README.md` / root `README.md`
+        `<img src=...icon.png>` currently points at
+        `github.com/readest/readest/.../src-tauri/icons/icon.png` with alt
+        "Readest Logo" — repoint to the Bookhearth repo icon and update alt text.
+      - Best done alongside / after the `readest`→`bookhearth` rename so paths
+        and repo URLs land in one pass.
+
 ## Backlog — iOS/iPad UI verification (Xcode)
 
 - [ ] Run `pnpm tauri ios build` (and/or launch the iOS simulator) to confirm
