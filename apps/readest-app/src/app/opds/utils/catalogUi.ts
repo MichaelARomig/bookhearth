@@ -16,7 +16,7 @@ export const getCatalogUiDescription = (
 export const getCatalogSetupHint = (_: TranslationFunc, isOnlineCatalogsAccessible?: boolean) =>
   isOnlineCatalogsAccessible
     ? _(
-        'Add a catalog URL. Readest will validate the feed and follow its browse, search, and download links.',
+        'Add a catalog URL. Bookhearth will validate the feed and follow its browse, search, and download links.',
       )
     : _(
         'For Calibre Content Server, add the root catalog URL such as http://host:8080/opds or /opds/index.xml. Readest will follow OPDS browse, search, pagination, and download links automatically. If the server uses HTTP Basic Auth, enter the username and password below.',

@@ -46,7 +46,7 @@ export const checkMixedFleetOnce = async (
       eventDispatcher.dispatch('toast', {
         type: 'info',
         timeout: 8000,
-        message: _('Another device is still syncing this library via Readest Cloud'),
+        message: _('Another device is still syncing this library'),
       });
       return true;
     }

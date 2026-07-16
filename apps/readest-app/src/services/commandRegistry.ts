@@ -656,7 +656,7 @@ const actionItems = [
   },
   {
     id: 'action.about',
-    labelKey: _('About Readest'),
+    labelKey: _('About Bookhearth'),
     keywords: ['about', 'readest', 'version', 'info'],
   },
 ];

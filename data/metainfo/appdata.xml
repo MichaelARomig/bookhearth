@@ -2,13 +2,13 @@
 <component type="desktop-application">
   <id>com.bilingify.readest</id>
 
-  <name>Readest</name>
-  <summary>Modern, feature-rich ebook reader</summary>
+  <name>Bookhearth</name>
+  <summary>Local-first, feature-rich ebook reader</summary>
 
   <description>
-    <p>Readest is a modern, feature-rich ebook reader designed for avid readers offering seamless cross-platform access, powerful tools, and an intuitive interface to elevate your reading experience.</p>
-    <p>Built as a modern rewrite of Foliate, Readest leverages Next.js 15 and Tauri v2 to deliver a smooth, cross-platform experience across macOS, Windows, Linux, Android, iOS, and the Web.</p>
-    <p>Whether you're analyzing complex texts, immersing yourself in stories, or exploring new ideas, Readest adapts to your needs with powerful features for deep, thoughtful reading.</p>
+    <p>Bookhearth is a local-first, feature-rich ebook reader designed for avid readers offering powerful tools, an intuitive interface, and sync through services you control to elevate your reading experience.</p>
+    <p>Bookhearth is a fork of Readest — itself a modern rewrite of Foliate — leveraging Next.js and Tauri v2 to deliver a smooth, cross-platform experience across macOS, Windows, Linux, Android, iOS, and the Web.</p>
+    <p>Whether you're analyzing complex texts, immersing yourself in stories, or exploring new ideas, Bookhearth adapts to your needs with powerful features for deep, thoughtful reading.</p>
     <p>Key features include:</p>
     <ul>
       <li>Multi-format support for EPUB, MOBI, KF8 (AZW3), FB2, CBZ, TXT, and PDF (experimental).</li>
@@ -23,9 +23,9 @@
       <li>Cross-platform synchronization of book files, reading progress, notes, and bookmarks across all supported platforms.</li>
       <li>Text-to-Speech functionality for a more accessible reading experience.</li>
       <li>Organize, sort, and manage your entire ebook library with advanced library management tools.</li>
-      <li>One-click file association to quickly open files in Readest from your file browser.</li>
+      <li>One-click file association to quickly open files in Bookhearth from your file browser.</li>
     </ul>
-    <p>Readest also includes custom CSS support for personalized styling, and code syntax highlighting for technical books. The application is designed to honor the legacy of deep reading while embracing modern technology for an enhanced experience.</p>
+    <p>Bookhearth also includes custom CSS support for personalized styling, and code syntax highlighting for technical books. The application is designed to honor the legacy of deep reading while embracing modern technology for an enhanced experience.</p>
   </description>
 
   <categories>
@@ -235,7 +235,7 @@
 
   <screenshots>
     <screenshot type="default">
-      <caption>Readest main interface with annotation</caption>
+      <caption>Bookhearth main interface with annotation</caption>
       <image type="source">https://raw.githubusercontent.com/readest/readest/refs/heads/main/data/screenshots/annotations.png</image>
     </screenshot>
     <screenshot>

@@ -24,7 +24,7 @@ describe('catalogUi', () => {
       'Browse and download books from online catalogs.',
     );
     expect(getCatalogSetupHint(_, true)).toBe(
-      'Add a catalog URL. Readest will validate the feed and follow its browse, search, and download links.',
+      'Add a catalog URL. Bookhearth will validate the feed and follow its browse, search, and download links.',
     );
   });
 });

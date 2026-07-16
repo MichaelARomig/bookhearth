@@ -56,7 +56,7 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
   const defaultTemplate = `## {{ title }}
 **${_('Author')}**: {{ author }}
 
-**${_('Exported from Readest')}**: {{ exportDate | date('%Y-%m-%d') }}
+**${_('Exported from Bookhearth')}**: {{ exportDate | date('%Y-%m-%d') }}
 
 ---
 
@@ -234,7 +234,9 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
 
       // Add export date
       if (exportConfig.includeDate) {
-        lines.push(`**${_('Exported from Readest')}**: ${new Date().toISOString().slice(0, 10)}`);
+        lines.push(
+          `**${_('Exported from Bookhearth')}**: ${new Date().toISOString().slice(0, 10)}`,
+        );
         lines.push('');
       }
 
