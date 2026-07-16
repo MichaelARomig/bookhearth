@@ -40,6 +40,24 @@
 
 ## Backlog — app icons + branding
 
+- [x] **Done (2026-07-16):** regenerated native icons via
+      `pnpm tauri icon IconKitchen-Output/ios/AppIcon~ios-marketing.png` (1024px
+      master) → rewrote `src-tauri/icons/*` (desktop `.ico`/`.icns`/`.png`,
+      Android mipmaps, iOS AppIcon set). Copied `IconKitchen-Output/web/*` into
+      `public/` (favicon.ico, apple-touch-icon.png, icon-192/512[-maskable].png)
+      and repointed `public/icon.png` + the PWA `manifest.json` icon set. README
+      logo now renders the regenerated `src-tauri/icons/icon.png`. `gen/`
+      Xcode/Android icon copies refresh on the next `tauri ios/android build`.
+      Restored the tracked customized Android adaptive-icon XML
+      (`gen/android/.../mipmap-anydpi-v26/ic_launcher.xml`) after `tauri icon`
+      clobbered it — it carries the `<monochrome>` themed-icon layer + 22% inset
+      foreground (guarded by `themed-icon.test.ts`).
+- [ ] **Follow-up:** the Android 13+ **themed (monochrome) launcher icon** still
+      uses the old silhouette — `ic_launcher_monochrome.png` (all densities) is a
+      tracked customization that `tauri icon` does NOT regenerate, and
+      IconKitchen-Output shipped no monochrome source. Generate a Bookhearth
+      monochrome/silhouette asset and replace those mipmaps to finish the Android
+      themed-icon rebrand.
 - [ ] Replace the app icons with the new set in `IconKitchen-Output/` (top level
       of the `ebook`/repo dir).
       - Regenerate native icons: `pnpm tauri icon <source>` using the 1024px
