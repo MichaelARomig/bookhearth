@@ -107,6 +107,13 @@
       - Follow-up (App Store only): extension `CFBundleShortVersionString` is `1.0`
         vs the app's `0.11.18` — Xcode warns they must match; align before store
         submission.
+- [x] **Sideload build for a free Apple account (2026-07-16):** `pnpm build-ios-sideload`
+      (`scripts/build-ios-sideload.sh`) produces an unsigned device
+      `.ipa` at `gen/apple/build/Bookhearth-unsigned.ipa` to install via
+      Sideloadly (re-signs with your Apple ID, sets bundle id, strips free-tier
+      entitlements). Full walkthrough + the "why" in
+      [`docs/ios-sideload-build.md`](docs/ios-sideload-build.md). Rebuild weekly
+      (free-team installs expire after 7 days).
 - [ ] Visually verify on device/simulator (this still needs a human): confirm
       the app renders on iPhone 15 Pro Max / iPad Pro, then check the new/changed
       settings surfaces on device: Integrations → AI
