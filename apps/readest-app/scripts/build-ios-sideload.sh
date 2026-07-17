@@ -30,6 +30,8 @@ DIRTY=(
   "src-tauri/gen/apple/Readest.xcodeproj/project.pbxproj"
   "src-tauri/gen/apple/ShareExtension/Info.plist"
   "src-tauri/gen/apple/ReadestWidget/Info.plist"
+  # tauri's deep-link plugin rewrites the main app's CFBundleURLTypes on build
+  "src-tauri/gen/apple/Readest_iOS/Info.plist"
 )
 restore() { ( cd "$APP_DIR" && git checkout -- "${DIRTY[@]}" 2>/dev/null || true ); }
 trap restore EXIT
