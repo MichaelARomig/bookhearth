@@ -1,5 +1,45 @@
 # TODOS
 
+## Session log — rebrand + icons + iOS sideload build (2026-07-16)
+
+Everything notable done in this session (all committed straight to `main`, no
+branches, no AI co-author trailers, per project convention):
+
+- **Rebrand Readest → Bookhearth — user-facing only; internals kept on the
+  `readest` name for upstream patch parity.** README fully rewritten (fork scope
+  + a "two names" explanation), `productName`, PWA manifest, SEO/OG metadata,
+  `appdata.xml`, `Info.plist` Face-ID, share/offline pages, ~30 in-app UI-string
+  files, the AI assistant persona, the native photo-album name, API error
+  strings, updater artifact names, and **all 34 locale files**. Removed
+  Discord/Reddit links + the "download the app" CTAs; user-facing GitHub links →
+  `github.com/MichaelARomig/bookhearth`; reworded "Readest Cloud"/"Readest
+  servers"; removed **LegalLinks** (Readest ToS/Privacy) from the About dialog.
+  Kept unchanged: folder names, `@readest/*` packages, Rust crate
+  `Readest`/`readestlib`, bundle id `com.bilingify.readest`, `readest://`,
+  `DATA_SUBDIR`, submodule URLs, `@readest/turso-*` deps, and AGPL/Foliate/Readest
+  attribution. The **koplugin, Calibre plugin, and browser extension** stay on
+  the `readest` name (backend-coupled to upstream Supabase / out of scope). See
+  [[rename-bookhearth-philosophy]]. Commits: `75b2ef08`, `8b18acc2`, `0a8408c8`.
+- **"Send to Bookhearth" hidden + backlogged** (backend-coupled) — see the
+  Send-to backlog section below.
+- **App icons regenerated** from `../IconKitchen-Output` (native + web/PWA +
+  tracked source master + `data/icons/README.md` provenance) — but the icons
+  themselves **are not right**; see the app-icons fix item below. Commits:
+  `54f3889e`, `1d5f8028`, `344fab1c`.
+- **Builds verified 3 ways:** `pnpm build` (web/Tauri export); **iOS simulator**
+  build + launch (library UI confirmed rendering); and an **iOS sideload build
+  for a free Apple account** — `pnpm build-ios-sideload` produces an unsigned
+  `.ipa` to install via Sideloadly. Full weekly-rebuild guide (prereqs, the
+  Homebrew-rust-vs-rustup PATH gotcha, and every workaround) in
+  [`docs/ios-sideload-build.md`](docs/ios-sideload-build.md). Commits `3ddbdb4d`,
+  `973712fb`. One-time build-Mac prereqs installed (not committable): full-Xcode
+  `xcode-select`, iOS Rust targets, `libimobiledevice`, CocoaPods.
+- **Collections / folders (usage clarification, no code change):** hierarchical
+  folders are created by **slash-separated Collection names** (e.g.
+  `Fiction/Science Fiction`). Enter select mode via the unlabeled square
+  "Select Books" icon (right of the `+` in the search bar) → **Collection**, or
+  use **Import into Collection**. Discoverability is poor — see backlog.
+
 ## Post-detach feature work — Bookhearth (2026-07-16)
 
 - [x] Translation providers: restored **DeepL** as a user-keyed provider (own
@@ -62,23 +102,28 @@
       IconKitchen-Output shipped no monochrome source. Generate a Bookhearth
       monochrome/silhouette asset and replace those mipmaps to finish the Android
       themed-icon rebrand.
-- [ ] Replace the app icons with the new set in `IconKitchen-Output/` (top level
-      of the `ebook`/repo dir).
-      - Regenerate native icons: `pnpm tauri icon <source>` using the 1024px
-        master `IconKitchen-Output/ios/AppIcon~ios-marketing.png` (falls back to
-        `android/play_store_512.png` at 512). This rewrites
-        `apps/readest-app/src-tauri/icons/*` (desktop `.ico`/`.icns`/`.png`,
-        Android mipmaps, iOS AppIcon set) — commit the regenerated files.
-      - Web/PWA icons are NOT covered by `tauri icon`: copy
-        `IconKitchen-Output/web/*` (favicon.ico, apple-touch-icon.png,
-        icon-192/512[-maskable].png) into the app's `public/` + update the PWA
-        manifest icon references if needed.
-      - Update the README logo: `apps/readest-app/README.md` / root `README.md`
-        `<img src=...icon.png>` currently points at
-        `github.com/readest/readest/.../src-tauri/icons/icon.png` with alt
-        "Readest Logo" — repoint to the Bookhearth repo icon and update alt text.
-      - Best done alongside / after the `readest`→`bookhearth` rename so paths
-        and repo URLs land in one pass.
+- [ ] **Fix the app icons — the current set isn't right.** The icons regenerated
+      2026-07-16 (see the Done item above) came out not-quite-right / not the
+      intended Bookhearth design. Low priority. To replace: drop a corrected
+      1024px master at `data/icons/readest-book.png` (the tracked source — keep
+      the filename for CI/worktree parity), then
+      `cd apps/readest-app && pnpm tauri icon ../../data/icons/readest-book.png`,
+      recopy `IconKitchen-Output/web/*` → `public/`, and restore the Android
+      `<monochrome>` adaptive-icon customization (see the follow-up above). Full
+      steps in `data/icons/README.md`.
+
+## Backlog — Collections / folders discoverability
+
+- [ ] Hierarchical folders work but aren't discoverable (took two sessions to
+      find). Two gaps: (1) "Select Books" is an **unlabeled icon**
+      (`PiSelectionAll`, right of the `+` in the library search bar) — no text,
+      only a tooltip; (2) nesting is done by typing **`/`-separated Collection
+      names** (`Fiction/Science Fiction`), which is invisible unless you already
+      know it. Consider: a hint/placeholder in the create-collection dialog
+      ("use / for sub-folders"), and/or labeling or relocating the Select-Books
+      affordance. Model recap: one Collection per book; `groupName` split on `/`
+      renders nested folders (`BookshelfItem.tsx`); a Collection persists once it
+      has ≥1 book. Behavior is correct — this is UX/discoverability only.
 
 ## Backlog — iOS/iPad UI verification (Xcode)
 
