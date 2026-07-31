@@ -11,3 +11,9 @@ updates:
           - '*' # Group all Actions updates into a single larger pull request
     schedule:
       interval: weekly
+    # Let every upstream release age before we adopt it. A compromised release
+    # is usually caught and yanked within days; waiting two weeks means we never
+    # pin a SHA during that window. github-actions supports default-days only
+    # (the semver-*-days variants are unsupported for this ecosystem).
+    cooldown:
+      default-days: 14
