@@ -1,10 +1,10 @@
 name: Publish Docker image
 
+# Not run on push: this image has never published successfully in this fork, so
+# the lane is manual until a dispatched run goes green. Restore the `push:`
+# trigger then.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
   release:
     types:
       - published

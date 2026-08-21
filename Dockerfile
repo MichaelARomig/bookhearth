@@ -6,6 +6,10 @@ RUN corepack prepare pnpm@11.1.1 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/readest-app/package.json ./apps/readest-app/
+# The root `postinstall` runs apps/readest-app/scripts/setup-vendors.mjs, so the
+# script has to be in the image before `pnpm install` below, not just before the
+# explicit `setup-vendors` run further down.
+COPY apps/readest-app/scripts/ ./apps/readest-app/scripts/
 COPY patches/ ./patches/
 COPY packages/ ./packages/
 RUN --mount=type=cache,id=pnpm,sharing=locked,target=/pnpm/store pnpm install --frozen-lockfile
