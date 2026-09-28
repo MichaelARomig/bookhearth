@@ -75,7 +75,14 @@ echo "  regenerated Xcode project"
 # --- 3. build the device app -------------------------------------------------
 # The .ipa EXPORT step will fail ("No Account for Team ..." / "No profiles") —
 # that's expected and fine: the archive with the compiled, unsigned app is what
-# we package. So we don't let that failure stop the script.
+# we package. So we don't let that failure stop the script. But a REAL compile
+# failure also exits non-zero here, and without this cleanup an old archive
+# from a previous successful run would still satisfy the "did it produce an
+# app" check below, silently repackaging a stale build as if it were fresh
+# (this actually happened: an Xcode update broke the Rust/Swift link, and the
+# script still reported success from a two-month-old archive). Deleting the
+# archive first means a failed build leaves nothing for that check to find.
+rm -rf "$GEN/build/Readest_iOS.xcarchive"
 echo "==> building (first run compiles the whole Rust-for-device tree; ~15-40 min)"
 ( cd "$APP_DIR" && pnpm exec tauri ios build --target aarch64 --ci ) || true
 
