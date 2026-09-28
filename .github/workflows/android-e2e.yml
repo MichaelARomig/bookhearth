@@ -2,15 +2,12 @@ name: Android E2E (CDP)
 
 # On-device end-to-end tests: boots an x86_64 Android emulator (KVM), installs
 # a debug APK, and runs the CDP-driven selection lane (pnpm test:android).
-# Not PR-blocking: runs nightly, on demand, or when a PR is labeled
-# `e2e-android`.
+# Not PR-blocking and no longer scheduled: this project ships iOS only, so the
+# Android lane runs on demand only. Re-add the `schedule:` and `pull_request:`
+# triggers here if Android becomes a shipping target again.
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '30 19 * * *'
-  pull_request:
-    types: [labeled, synchronize]
 
 concurrency:
   group: android-e2e-${{ github.ref }}

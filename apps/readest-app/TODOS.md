@@ -1,5 +1,57 @@
 # TODOS
 
+## Session log — CI cleanup, Docker fix, history rewrite (2026-08-20)
+
+**Goal was simple: no failing GitHub Actions runs.** Four workflows were red.
+`gh secret list` is **empty** — this fork inherited upstream's release pipeline
+with none of its credentials, so three of the four could never go green as-is.
+
+- **Gated to `workflow_dispatch:` only**, each with a header comment naming the
+  missing secret and the trigger to restore:
+  - `nightly.yml` — bundles build fine, then every leg dies at signing
+    (`failed to decode secret key`, `failed to import keychain certificate`,
+    Android `KeytoolException`); `assemble-manifest` cannot reach the R2 bucket
+    `readest-releases`. Had been red nightly for 8+ days. Its two Linux legs
+    additionally hit `timed out after 45 minutes` on a cold cache — a separate,
+    still-open issue.
+  - `android-e2e.yml` — dropped `schedule:` **and** `pull_request:`. Bookhearth
+    ships **iOS only**, so Android is not a target; the failing "auto page
+    turn" test in `selection.android.test.ts` was left as-is on purpose.
+  - `vercel-merge.yml` — `Input required and not supplied: vercel-token`.
+- **`docker-image.yml` — fixed and now publishing.** Two stacked bugs, red
+  14/14 runs before this:
+  1. `c8d4e9ab` — the image reference interpolated `github.repository_owner`
+     verbatim and Docker rejects non-lowercase names (`MichaelARomig/readest
+     must be lowercase`). Both jobs now resolve a lowercased `IMAGE_BASE`;
+     image renamed `readest` → `bookhearth` (nothing had ever published under
+     the old name).
+  2. `5b52f9ac` — fixing the above exposed an older failure: the root
+     `postinstall` runs `apps/readest-app/scripts/setup-vendors.mjs`, but the
+     Dockerfile's `dependencies` stage never copied `scripts/` before
+     `pnpm install`. That postinstall arrived with the original Readest import
+     (`bc307ba8`), so the image had **never** built in this fork.
+  Dispatched run `32443994730` went **green on all three jobs** (amd64, arm64,
+  merge), so the `push:` trigger is restored and `ghcr.io/michaelaromig/
+  bookhearth` now publishes on merge to `main`.
+- **Untouched and green:** `pull-request.yml`, `codeql.yml`, `scorecard.yml`.
+- **`release.yml` is a latent failure** — still fires on `release: published`
+  and needs the same signing secrets. Left alone because it only runs on a
+  deliberate release. Gate it if no signed releases are planned from this fork.
+
+### AI co-author trailers stripped from fork history
+
+Per this file's "no AI co-author trailers" convention, the **16 commits since
+the `bc307ba8` import** were rewritten to drop `Co-authored-by: Claude` (6 of
+them carried one). Verified content-identical to the pre-rewrite tree, same
+2561 commit count. Backup ref: tag `pre-trailer-rewrite-2026-08-20` and branch
+`backup/pre-trailer-rewrite`. Every SHA in this file was remapped accordingly.
+
+**Upstream history was deliberately left alone.** It holds ~881 inherited AI
+trailers but also **19 distinct human co-authors**; rewriting it would erase
+real attribution from an AGPL project and permanently break the ability to
+merge from upstream. If that is ever wanted it needs a considered decision, not
+a sweep.
+
 ## Session log — rebrand + icons + iOS sideload build (2026-07-16)
 
 Everything notable done in this session (all committed straight to `main`, no
@@ -19,20 +71,20 @@ branches, no AI co-author trailers, per project convention):
   `DATA_SUBDIR`, submodule URLs, `@readest/turso-*` deps, and AGPL/Foliate/Readest
   attribution. The **koplugin, Calibre plugin, and browser extension** stay on
   the `readest` name (backend-coupled to upstream Supabase / out of scope). See
-  [[rename-bookhearth-philosophy]]. Commits: `75b2ef08`, `8b18acc2`, `0a8408c8`.
+  [[rename-bookhearth-philosophy]]. Commits: `088dd5b0`, `304e8602`, `f6927583`.
 - **"Send to Bookhearth" hidden + backlogged** (backend-coupled) — see the
   Send-to backlog section below.
 - **App icons regenerated** from `../IconKitchen-Output` (native + web/PWA +
   tracked source master + `data/icons/README.md` provenance) — but the icons
   themselves **are not right**; see the app-icons fix item below. Commits:
-  `54f3889e`, `1d5f8028`, `344fab1c`.
+  `138e93c3`, `6ce0b5d4`, `2d4db043`.
 - **Builds verified 3 ways:** `pnpm build` (web/Tauri export); **iOS simulator**
   build + launch (library UI confirmed rendering); and an **iOS sideload build
   for a free Apple account** — `pnpm build-ios-sideload` produces an unsigned
   `.ipa` to install via Sideloadly. Full weekly-rebuild guide (prereqs, the
   Homebrew-rust-vs-rustup PATH gotcha, and every workaround) in
-  [`docs/ios-sideload-build.md`](docs/ios-sideload-build.md). Commits `3ddbdb4d`,
-  `973712fb`. One-time build-Mac prereqs installed (not committable): full-Xcode
+  [`docs/ios-sideload-build.md`](docs/ios-sideload-build.md). Commits `bae98d6c`,
+  `69bf7f42`. One-time build-Mac prereqs installed (not committable): full-Xcode
   `xcode-select`, iOS Rust targets, `libimobiledevice`, CocoaPods.
 - **Collections / folders (usage clarification, no code change):** hierarchical
   folders are created by **slash-separated Collection names** (e.g.
@@ -47,7 +99,7 @@ branches, no AI co-author trailers, per project convention):
       per-provider enablement (`settings.translation`) with a "Translation
       Providers" settings section: Google/Azure/Yandex on by default, DeepL off
       until keyed, LiteLLM via its own endpoint gate. Default selected provider
-      is now `google`. Tests + committed/pushed (488683d6).
+      is now `google`. Tests + committed/pushed (1e8b1776).
 - [x] WebDAV **multiple named server profiles**: `WebDAVProfile[]` +
       `activeProfileId`; active profile mirrored onto the top-level connection
       so the sync engine/client are unchanged. Pure helper

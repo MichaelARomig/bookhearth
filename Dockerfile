@@ -6,6 +6,9 @@ RUN corepack prepare pnpm@11.1.1 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/readest-app/package.json ./apps/readest-app/
+# Needed by the explicit `setup-vendors` run further down (no root `postinstall`
+# hook calls it anymore — upstream dropped that pattern; see `pnpm setup-vendors`).
+COPY apps/readest-app/scripts/ ./apps/readest-app/scripts/
 COPY patches/ ./patches/
 COPY packages/ ./packages/
 RUN --mount=type=cache,id=pnpm,sharing=locked,target=/pnpm/store pnpm install --frozen-lockfile

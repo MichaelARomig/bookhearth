@@ -8,9 +8,11 @@
 # per-leg manifest fragments so a single failing leg never clobbers the manifest.
 name: Nightly Readest
 
+# Unscheduled: this fork has no signing secrets (Tauri updater key, Apple cert,
+# Android keystore) or R2 credentials, so every leg fails at the signing step
+# even though the bundles build fine. Restore the nightly `schedule:` trigger
+# once those secrets exist.
 on:
-  schedule:
-    - cron: '0 22 * * *' # 22:00 UTC = 06:00 GMT+8
   workflow_dispatch:
 
 permissions:
