@@ -13,25 +13,36 @@ import { getDeeplApiKey, isTranslationProviderEnabled } from '../enablement';
 const DEEPL_FREE_ENDPOINT = 'https://api-free.deepl.com/v2/translate';
 const DEEPL_PRO_ENDPOINT = 'https://api.deepl.com/v2/translate';
 
-// DeepL's target-language codes are mostly the uppercased short code; a couple
-// of Chinese variants need mapping to DeepL's v2 codes.
-const DEEPL_LANG_MAP: Record<string, string> = {
-  'ZH-HANS': 'ZH',
-  'ZH-HANT': 'ZH-HANT',
-};
-
-const toDeeplLang = (lang: string): string => {
-  const short = normalizeToShortLang(lang).toUpperCase();
-  return DEEPL_LANG_MAP[short] ?? short;
-};
-
 const endpointForKey = (key: string): string =>
   key.endsWith(':fx') ? DEEPL_FREE_ENDPOINT : DEEPL_PRO_ENDPOINT;
+
+/**
+ * DeepL language codes are upper-case, but the service answers 500 when the
+ * *script* subtag is upper-cased too. Measured against the live endpoint:
+ * `ZH-HANT` and `ZH-TW` both fail, while `ZH-Hant` answers 200 with real
+ * Traditional Chinese — and the same holds for `source_lang`. Upper-casing the
+ * whole code therefore turned every zh-TW/zh-HK/zh-MO translation into a hard
+ * failure. `normalizeToShortLang` already returns the canonical `zh-Hans` /
+ * `zh-Hant`, so only the primary subtag is upper-cased and the script subtag
+ * keeps the casing it came with. Languages without a script subtag ('en' -> 'EN',
+ * and 'AUTO' -> 'AUTO') are unaffected.
+ */
+const toDeeplLang = (lang: string): string => {
+  const [primary, ...rest] = normalizeToShortLang(lang).split('-');
+  return [primary!.toUpperCase(), ...rest].join('-');
+};
 
 export const deeplProvider: TranslationProvider = {
   name: 'deepl',
   label: _('DeepL'),
   authRequired: false,
+  // No `preservesMarkup`: round-tripping inline markup through this endpoint
+  // corrupts it, silently and inconsistently. Measured against the live API —
+  // `<b>` and `<i>` alone survive, but `<em>` is dropped outright, and when a
+  // sentence carries both bold and italic the bold content is moved outside
+  // its own tag, leaving an empty `<b></b>` so nothing renders bold. Losing
+  // the formatting while keeping the text (the plain-text path) is better than
+  // emitting markup that lies about it.
   quotaExceeded: false,
   // Unavailable unless the user both enabled DeepL and entered an API key.
   get disabled() {

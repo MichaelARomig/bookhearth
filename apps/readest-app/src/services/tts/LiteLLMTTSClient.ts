@@ -1,4 +1,4 @@
-import { TTSClient, TTSMessageEvent } from './TTSClient';
+import { TTSCapabilities, TTSClient, TTSMessageEvent } from './TTSClient';
 import { TTSGranularity, TTSMark, TTSVoice, TTSVoicesGroup } from './types';
 import { parseSSMLMarks } from '@/utils/ssml';
 import { TTSController } from './TTSController';
@@ -385,6 +385,21 @@ export class LiteLLMTTSClient implements TTSClient {
 
   supportsWordBoundaries(): boolean {
     return false;
+  }
+
+  getCapabilities(): TTSCapabilities {
+    // Mirrors BufferedTTSClient's web path (this client always schedules on
+    // WebAudioPlayer, never NativeAudioPlayer): a real audio clock and gap
+    // control, but the playback rate is WSOLA-baked into the buffer rather
+    // than applied live, and the OpenAI-compatible route returns no
+    // word-boundary timings (see supportsWordBoundaries()).
+    return {
+      wordBoundaries: false,
+      mediaClock: true,
+      gapControl: true,
+      liveRateChange: false,
+      scheduledGaps: true,
+    };
   }
 
   getGranularities(): TTSGranularity[] {

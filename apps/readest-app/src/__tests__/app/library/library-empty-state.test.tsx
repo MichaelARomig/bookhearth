@@ -21,91 +21,50 @@ afterEach(() => {
 });
 
 describe('LibraryEmptyState', () => {
-  it('renders title, desktop description, and local-first actions on desktop', () => {
+  it('renders title, desktop description, and the import action on desktop', () => {
     useEnvMock.mockReturnValue({
-      appService: { isMobile: false, isOnlineCatalogsAccessible: false },
+      appService: { isMobile: false },
     });
-    render(
-      <LibraryEmptyState
-        onImport={vi.fn()}
-        onImportIntoCollection={vi.fn()}
-        onOpenCatalogManager={vi.fn()}
-      />,
-    );
+    render(<LibraryEmptyState onImport={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'Start your library' })).toBeTruthy();
     expect(screen.getByText(/drop a book anywhere on this window/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Import Books' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Import into Collection' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'OPDS / Calibre Catalogs' })).toBeTruthy();
   });
 
   it('renders mobile description (no drag-drop language) when appService.isMobile', () => {
     useEnvMock.mockReturnValue({
-      appService: { isMobile: true, isOnlineCatalogsAccessible: false },
+      appService: { isMobile: true },
     });
-    render(
-      <LibraryEmptyState
-        onImport={vi.fn()}
-        onImportIntoCollection={vi.fn()}
-        onOpenCatalogManager={vi.fn()}
-      />,
-    );
+    render(<LibraryEmptyState onImport={vi.fn()} />);
 
     expect(screen.getByText(/pick a book from your device/i)).toBeTruthy();
     expect(screen.queryByText(/drop a book anywhere on this window/i)).toBeNull();
   });
 
-  it('shows the online-library label when the app exposes online catalogs', () => {
+  it('calls onImport with the button element when the Import Books button is clicked', () => {
     useEnvMock.mockReturnValue({
-      appService: { isMobile: false, isOnlineCatalogsAccessible: true },
-    });
-    render(
-      <LibraryEmptyState
-        onImport={vi.fn()}
-        onImportIntoCollection={vi.fn()}
-        onOpenCatalogManager={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole('button', { name: 'Online Library' })).toBeTruthy();
-  });
-
-  it('calls onImport when the Import Books button is clicked', () => {
-    useEnvMock.mockReturnValue({
-      appService: { isMobile: false, isOnlineCatalogsAccessible: false },
+      appService: { isMobile: false },
     });
     const handleImport = vi.fn();
-    render(
-      <LibraryEmptyState
-        onImport={handleImport}
-        onImportIntoCollection={vi.fn()}
-        onOpenCatalogManager={vi.fn()}
-      />,
-    );
+    render(<LibraryEmptyState onImport={handleImport} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Import Books' }));
+    const button = screen.getByRole('button', { name: 'Import Books' });
+    fireEvent.click(button);
 
     expect(handleImport).toHaveBeenCalledTimes(1);
+    expect(handleImport).toHaveBeenCalledWith(button);
   });
 
-  it('exposes collection creation without account/auth affordances', () => {
+  it('exposes the import action without account/auth affordances', () => {
     useEnvMock.mockReturnValue({
-      appService: { isMobile: false, isOnlineCatalogsAccessible: false },
+      appService: { isMobile: false },
     });
-    const onImportIntoCollection = vi.fn();
-    const { container } = render(
-      <LibraryEmptyState
-        onImport={vi.fn()}
-        onImportIntoCollection={onImportIntoCollection}
-        onOpenCatalogManager={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Import into Collection' }));
-    expect(onImportIntoCollection).toHaveBeenCalledTimes(1);
+    const { container } = render(<LibraryEmptyState onImport={vi.fn()} />);
 
     // Local-first empty state must not push users toward account/premium surfaces.
+    // Import into Collection and OPDS/Calibre catalog access live in the shared
+    // import menu this button opens (see import-menu.test.tsx).
     const body = container.textContent ?? '';
     expect(body).not.toMatch(/sign in|log in|subscribe|premium|account/i);
   });

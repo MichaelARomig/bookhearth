@@ -4,7 +4,12 @@ import clsx from 'clsx';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSettingsStore } from '@/store/settingsStore';
-import { getCloudSyncProvider, cloudProviderDisplayName } from '@/services/sync/cloudSyncProvider';
+import { useEnsureSettingsLoaded } from '@/hooks/useEnsureSettingsLoaded';
+import {
+  isReadestCloudEnabled,
+  getEnabledFileSyncBackends,
+  cloudProvidersDisplayName,
+} from '@/services/sync/cloudSyncProvider';
 import {
   SYNC_CATEGORIES,
   isSyncCategoryLocked,
@@ -48,11 +53,15 @@ const useCategoryCopy = (): Record<SyncCategory, CategoryCopy> => {
       title: _('OPDS catalogs'),
       description: _('Saved catalog URLs and (encrypted) credentials'),
     },
+    abs_server: {
+      title: _('Audiobookshelf Servers'),
+      description: _('Saved server URLs and (encrypted) credentials'),
+    },
     settings: {
+      // Dictionary preferences ride this row too, but they're gated by the
+      // Dictionaries toggle above, so they're deliberately not listed here.
       title: _('App settings'),
-      description: _(
-        'Theme, highlight colours, integrations (KOSync, Readwise, Hardcover), and dictionary order',
-      ),
+      description: _('Theme, highlight colours, and integrations (KOSync, Readwise, Hardcover)'),
     },
     credentials: {
       title: _('Credentials'),
@@ -71,11 +80,16 @@ export function SyncCategoriesSection() {
   const _ = useTranslation();
   const { envConfig } = useEnv();
   const { settings, setSettings, saveSettings } = useSettingsStore();
+  const hydrated = useEnsureSettingsLoaded();
   const copy = useCategoryCopy();
-  const cloudProvider = getCloudSyncProvider(settings);
-  const cloudProviderName = cloudProviderDisplayName(cloudProvider);
+  const readestEnabled = isReadestCloudEnabled(settings);
+  const backends = getEnabledFileSyncBackends(settings);
+  const cloudProviderName = cloudProvidersDisplayName(backends);
 
-  if (!settings) return null;
+  // A refreshed /user renders before the store is hydrated, where every
+  // category reads its default. Showing that would misreport the user's real
+  // choices, and toggling a row would persist the empty object over them.
+  if (!settings || !hydrated) return null;
 
   const enabled = (category: SyncCategory): boolean => {
     const value = settings.syncCategories?.[category];
@@ -119,7 +133,8 @@ export function SyncCategoriesSection() {
           // place (same pattern as `locked`), but the toggle stays
           // interactive and persists for any later provider change.
           const managedByProvider =
-            cloudProvider !== 'readest' &&
+            !readestEnabled &&
+            backends.length > 0 &&
             (category === 'book' || category === 'progress' || category === 'note');
           return (
             <li key={category} className='flex items-center justify-between gap-4 px-4 py-3'>

@@ -26,7 +26,7 @@ import type { WebDAVSettings } from '@/types/settings';
 import { SectionTitle, SettingsSwitchRow } from '../primitives';
 import FileSyncForm from './FileSyncForm';
 import WebDAVBrowsePane from './WebDAVBrowsePane';
-import { persistActiveCloudProvider } from './cloudSync';
+import { persistCloudProviderEnabled } from './cloudSync';
 
 /**
  * Translate a connection-probe failure into a user-facing string. Each branch is
@@ -44,7 +44,7 @@ const formatConnectError = (_: TranslationFunc, result: WebDAVConnectResult): st
       return _('Unexpected server response (status {{status}})', { status: result.status ?? 0 });
     case 'NETWORK':
     default:
-      return _('Network error');
+      return result.message ? `${_('Network error')}: ${result.message}` : _('Network error');
   }
 };
 
@@ -55,9 +55,8 @@ const formatConnectError = (_: TranslationFunc, result: WebDAVConnectResult): st
  * - **Active** (`webdav.enabled`): the shared {@link FileSyncForm} sync controls
  *   + the {@link WebDAVBrowsePane} + a Disconnect button.
  * - **Inactive**: the URL/credentials form (pre-filled from saved settings, so a
- *   previously-configured server reconnects in one click). Connecting makes
- *   WebDAV the active provider and turns Google Drive off (cloud providers are
- *   mutually exclusive).
+ *   previously-configured server reconnects in one click). Connecting turns
+ *   WebDAV on; every other provider is left exactly as it was (#5062).
  */
 const WebDAVForm: React.FC = () => {
   const _ = useTranslation();
@@ -163,11 +162,11 @@ const WebDAVForm: React.FC = () => {
       return;
     }
     // Build the WebDAV connect settings (preserves deviceId / sub-toggles), then
-    // make WebDAV the single active cloud provider (turns Google Drive off).
-    // persistActiveCloudProvider owns activation, persistence, and the
+    // switch WebDAV on. Every other provider is left untouched (#5062).
+    // persistCloudProviderEnabled owns activation, persistence, and the
     // cross-window provider broadcast.
     const connection = { serverUrl: url, username, password, rootPath: normalizedRoot };
-    await persistActiveCloudProvider(envConfig, 'webdav', (s) => ({
+    await persistCloudProviderEnabled(envConfig, 'webdav', true, (s) => ({
       ...s,
       // buildWebDAVConnectSettings preserves deviceId / sub-toggles;
       // applyConnectionToActive mirrors the connection into the active profile.
@@ -178,8 +177,9 @@ const WebDAVForm: React.FC = () => {
   };
 
   const handleDisconnect = async () => {
-    // Deactivate (keep the credentials so a later reconnect is one click).
-    await persistActiveCloudProvider(envConfig, null);
+    // Switch WebDAV off only — other providers keep syncing. Credentials stay
+    // so a later reconnect is one click.
+    await persistCloudProviderEnabled(envConfig, 'webdav', false);
     setShowPassword(false);
     eventDispatcher.dispatch('toast', { type: 'info', message: _('Disconnected') });
   };
@@ -207,7 +207,7 @@ const WebDAVForm: React.FC = () => {
               'h-10 rounded-lg px-4 text-sm font-medium',
               'text-error hover:bg-error/10',
               'transition-colors duration-150',
-              'focus-visible:ring-error/40 focus-visible:outline-none focus-visible:ring-2',
+              'focus-visible:ring-error/40 focus-visible:outline-hidden focus-visible:ring-2',
             )}
           >
             {_('Disconnect')}
@@ -287,7 +287,7 @@ const WebDAVForm: React.FC = () => {
           id='webdav-server-url'
           type='text'
           placeholder='https://dav.example.com'
-          className='input input-bordered eink-bordered h-11 w-full text-sm focus:outline-none'
+          className='input eink-bordered h-11 w-full text-sm focus:outline-hidden'
           spellCheck='false'
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -302,7 +302,7 @@ const WebDAVForm: React.FC = () => {
           id='webdav-username'
           type='text'
           placeholder={_('Your Username')}
-          className='input input-bordered eink-bordered h-11 w-full text-sm focus:outline-none'
+          className='input eink-bordered h-11 w-full text-sm focus:outline-hidden'
           spellCheck='false'
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -319,7 +319,7 @@ const WebDAVForm: React.FC = () => {
             id='webdav-password'
             type={showPassword ? 'text' : 'password'}
             placeholder={_('Your Password')}
-            className='input input-bordered eink-bordered h-11 w-full pe-11 text-sm focus:outline-none'
+            className='input eink-bordered h-11 w-full pe-11 text-sm focus:outline-hidden'
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete='current-password'
@@ -329,10 +329,10 @@ const WebDAVForm: React.FC = () => {
             onClick={() => setShowPassword((v) => !v)}
             className={clsx(
               'absolute end-2 top-1/2 -translate-y-1/2',
-              'flex h-8 w-8 items-center justify-center rounded',
+              'flex h-8 w-8 items-center justify-center rounded-sm',
               'text-base-content/60 hover:text-base-content',
               'hover:bg-base-200/60 transition-colors duration-150',
-              'focus-visible:ring-base-content/15 focus-visible:outline-none focus-visible:ring-2',
+              'focus-visible:ring-base-content/15 focus-visible:outline-hidden focus-visible:ring-2',
             )}
             aria-label={showPassword ? _('Hide password') : _('Show password')}
             title={showPassword ? _('Hide password') : _('Show password')}
@@ -355,7 +355,7 @@ const WebDAVForm: React.FC = () => {
           id='webdav-root'
           type='text'
           placeholder='/'
-          className='input input-bordered eink-bordered h-11 w-full text-sm focus:outline-none'
+          className='input eink-bordered h-11 w-full text-sm focus:outline-hidden'
           spellCheck='false'
           value={rootPath}
           onChange={(e) => setRootPath(e.target.value)}
@@ -394,7 +394,7 @@ const WebDAVForm: React.FC = () => {
           className={clsx(
             'btn btn-contrast',
             'h-10 min-h-10 rounded-lg border-0 px-5 text-sm font-medium',
-            'focus-visible:ring-base-content/40 focus-visible:outline-none focus-visible:ring-2',
+            'focus-visible:ring-base-content/40 focus-visible:outline-hidden focus-visible:ring-2',
             isConnecting && 'opacity-60',
           )}
         >

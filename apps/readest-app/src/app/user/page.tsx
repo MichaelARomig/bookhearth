@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useEnv } from '@/context/EnvContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useTranslation } from '@/hooks/useTranslation';
-import { getCloudSyncProvider, cloudProviderDisplayName } from '@/services/sync/cloudSyncProvider';
+import {
+  getEnabledFileSyncBackends,
+  cloudProvidersDisplayName,
+} from '@/services/sync/cloudSyncProvider';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useThemeStore } from '@/store/themeStore';
 import { navigateToLibrary } from '@/utils/nav';
@@ -22,11 +25,11 @@ const LocalServicesPage = () => {
 
   useTheme({ systemUIVisible: false });
 
-  const cloudProvider = getCloudSyncProvider(settings);
+  const fileSyncBackends = getEnabledFileSyncBackends(settings);
   const syncProviderLabel =
-    cloudProvider === 'readest'
+    fileSyncBackends.length === 0
       ? _('No library sync provider selected')
-      : cloudProviderDisplayName(cloudProvider);
+      : cloudProvidersDisplayName(fileSyncBackends);
   const kosyncLabel = settings?.kosync?.enabled
     ? settings.kosync.serverUrl || _('Configured')
     : _('Disabled');

@@ -87,9 +87,17 @@ describe('EdgeSpeechTTS on Cloudflare Workers', () => {
       }
     });
 
-    const fetchSpy = vi.fn().mockResolvedValue({
-      status: 101,
-      webSocket: mockSocket,
+    // i18next lazily fetches the locale JSON on its first use, which can land
+    // inside this test (module state is fresh after vi.resetModules()) and
+    // would otherwise be swallowed by a blanket fetch mock. Only intercept the
+    // WebSocket-upgrade request; let anything else — like that locale fetch —
+    // through to the real fetch.
+    const realFetch = originalFetch!;
+    const fetchSpy = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes('speech.platform.bing.com')) {
+        return Promise.resolve({ status: 101, webSocket: mockSocket });
+      }
+      return realFetch(input, init);
     });
     globalThis.fetch = fetchSpy as unknown as typeof fetch;
 
@@ -108,9 +116,14 @@ describe('EdgeSpeechTTS on Cloudflare Workers', () => {
     const buffer = await response.arrayBuffer();
     expect(new Uint8Array(buffer)).toEqual(new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]));
 
-    // fetch should be called once with an https URL and an Upgrade header.
-    expect(fetchSpy).toHaveBeenCalledOnce();
-    const call = fetchSpy.mock.calls[0]!;
+    // The WebSocket upgrade should be requested exactly once, with an https
+    // URL and an Upgrade header. (fetchSpy may have also seen an incidental
+    // i18next locale fetch, which isn't what this test is about.)
+    const wsUpgradeCalls = fetchSpy.mock.calls.filter(([input]) =>
+      String(input).includes('speech.platform.bing.com'),
+    );
+    expect(wsUpgradeCalls).toHaveLength(1);
+    const call = wsUpgradeCalls[0]!;
     const calledUrl = call[0] as string | URL;
     const calledInit = call[1] as RequestInit;
     expect(String(calledUrl)).toContain('https://speech.platform.bing.com/');

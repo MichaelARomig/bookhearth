@@ -24,7 +24,12 @@ const makeMockClient = (name: string): TTSClient => ({
   getAllVoices: vi.fn().mockResolvedValue([]),
   getVoices: vi.fn().mockResolvedValue([]),
   getGranularities: vi.fn().mockReturnValue(['sentence']),
-  supportsWordBoundaries: vi.fn().mockReturnValue(false),
+  getCapabilities: vi.fn().mockReturnValue({
+    wordBoundaries: false,
+    mediaClock: false,
+    gapControl: false,
+    liveRateChange: false,
+  }),
   getVoiceId: vi.fn().mockReturnValue('detach-voice'),
   getSpeakingLang: vi.fn().mockReturnValue('en'),
 });
@@ -35,6 +40,7 @@ vi.mock('@/services/tts/WebSpeechClient', () => ({
   }),
 }));
 vi.mock('@/services/tts/EdgeTTSClient', () => ({
+  DEFAULT_SENTENCE_GAP_SEC: 0.15,
   EdgeTTSClient: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
     Object.assign(this, makeMockClient('edge-tts'));
   }),

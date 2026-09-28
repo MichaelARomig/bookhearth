@@ -10,6 +10,8 @@ import {
 } from '@/types/book';
 import { DBBookConfig, DBBook, DBBookNote } from '@/types/records';
 import { sanitizeString } from './sanitize';
+import { buildFeedBookUrl } from '@/services/rss/feedBookUrl';
+import { restoreAbsBookFields } from './audiobook';
 
 export const transformBookConfigToDB = (bookConfig: unknown, userId: string): DBBookConfig => {
   const {
@@ -73,6 +75,7 @@ export const transformBookToDB = (book: unknown, userId: string): DBBook => {
     author,
     groupId,
     groupName,
+    groupUpdatedAt,
     tags,
     progress,
     readingStatus,
@@ -80,6 +83,7 @@ export const transformBookToDB = (book: unknown, userId: string): DBBook => {
     coverHash,
     coverUpdatedAt,
     metadata,
+    metadataUpdatedAt,
     createdAt,
     updatedAt,
     deletedAt,
@@ -95,6 +99,7 @@ export const transformBookToDB = (book: unknown, userId: string): DBBook => {
     author: sanitizeString(author)!,
     group_id: groupId,
     group_name: sanitizeString(groupName),
+    group_updated_at: groupUpdatedAt ? new Date(groupUpdatedAt).toISOString() : null,
     tags: tags,
     progress: progress,
     reading_status: readingStatus,
@@ -105,6 +110,7 @@ export const transformBookToDB = (book: unknown, userId: string): DBBook => {
     cover_updated_at: coverUpdatedAt ? new Date(coverUpdatedAt).toISOString() : null,
     source_title: sanitizeString(sourceTitle),
     metadata: metadata ? sanitizeString(JSON.stringify(metadata)) : null,
+    metadata_updated_at: metadataUpdatedAt ? new Date(metadataUpdatedAt).toISOString() : null,
     created_at: new Date(createdAt ?? Date.now()).toISOString(),
     updated_at: new Date(updatedAt ?? Date.now()).toISOString(),
     deleted_at: deletedAt ? new Date(deletedAt).toISOString() : null,
@@ -121,6 +127,7 @@ export const transformBookFromDB = (dbBook: DBBook): Book => {
     author,
     group_id,
     group_name,
+    group_updated_at,
     tags,
     progress,
     reading_status,
@@ -129,13 +136,14 @@ export const transformBookFromDB = (dbBook: DBBook): Book => {
     cover_updated_at,
     source_title,
     metadata,
+    metadata_updated_at,
     created_at,
     updated_at,
     deleted_at,
     uploaded_at,
   } = dbBook;
 
-  return {
+  const book: Book = {
     hash: book_hash,
     metaHash: meta_hash,
     format: format as BookFormat,
@@ -143,6 +151,7 @@ export const transformBookFromDB = (dbBook: DBBook): Book => {
     author,
     groupId: group_id,
     groupName: group_name,
+    groupUpdatedAt: group_updated_at ? new Date(group_updated_at).getTime() : null,
     tags: tags,
     progress: progress,
     readingStatus: reading_status as ReadingStatus,
@@ -153,11 +162,24 @@ export const transformBookFromDB = (dbBook: DBBook): Book => {
     coverUpdatedAt: cover_updated_at ? new Date(cover_updated_at).getTime() : null,
     sourceTitle: source_title,
     metadata: metadata ? JSON.parse(metadata) : null,
+    metadataUpdatedAt: metadata_updated_at ? new Date(metadata_updated_at).getTime() : null,
     createdAt: new Date(created_at!).getTime(),
     updatedAt: new Date(updated_at!).getTime(),
     deletedAt: deleted_at ? new Date(deleted_at).getTime() : null,
     uploadedAt: uploaded_at ? new Date(uploaded_at).getTime() : null,
   };
+  // Native cloud DBBook has no `url` column; a feed book carries its feed URL in
+  // metadata so the reader can rebuild the feed:// descriptor here.
+  if (!book.url && book.metadata?.feedUrl) {
+    book.url = buildFeedBookUrl(book.metadata.feedUrl);
+  }
+  // Same story for an ABS stub, whose identity is its `abs://` filePath: no
+  // column carries it (and the push strips filePath as device-local), so it
+  // rides in metadata and is rebuilt here along with the badge fields.
+  if (book.format === 'ABS') {
+    restoreAbsBookFields(book);
+  }
+  return book;
 };
 
 export const transformBookNoteToDB = (bookNote: unknown, userId: string): DBBookNote => {

@@ -111,20 +111,23 @@ are intentionally left untouched so their patches remain a `git submodule update
 
 | **Feature**                                | **Description**                                                                                                        |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| **Multi-Format Support**                   | EPUB, MOBI, KF8 (AZW3), FB2, CBZ, TXT, PDF.                                                                            |
+| **Multi-Format Support**                   | EPUB, MOBI, KF8 (AZW3), FB2, CBZ, TXT, PDF, MD (Markdown).                                                             |
 | **Scroll/Page View Modes**                 | Switch between scrolling or paginated reading modes.                                                                   |
-| **Full-Text Search**                       | Search across the entire book to find relevant sections.                                                               |
+| **Full-Text Search**                       | Search inside a single book or across your entire library to find relevant sections.                                  |
 | **Annotations and Highlighting**           | Add highlights, bookmarks, and notes, with an instant mode for quicker interactions.                                   |
-| **Dictionary/Wikipedia Lookup**            | Instantly look up words and terms while reading.                                                                       |
+| **Dictionary/Wikipedia Lookup**            | Look up words with built-in sources or import local packs, including Yomitan ZIP/RDICT.                                |
 | **Parallel Read**                          | Read two books or documents simultaneously in a split-screen view.                                                     |
 | **Customize Font and Layout**              | Adjust font, layout, theme mode, and theme colors.                                                                     |
 | **Code Syntax Highlighting**               | Rich coloring of code examples in technical books.                                                                     |
 | **File Association and Open With**         | Open supported files directly from your file browser.                                                                  |
-| **Library Management**                     | Organize, sort, and manage your entire ebook library, including Collections.                                           |
+| **Library Management**                     | Organize, sort, and manage your entire ebook library, including Collections and RSS/Atom/JSON feed subscriptions.      |
 | **OPDS/Calibre Integration**               | Connect OPDS / Calibre / Calibre-Web catalogs, with authenticated browsing and downloads.                              |
+| **Web Page Clipping**                      | Open websites in an in-app browser, sign in, and clip pages or import web novel chapters and their images.             |
 | **Translation**                            | Translate a sentence or a whole book via Google, Azure, Yandex, DeepL (your key), or a LiteLLM endpoint.               |
 | **Text-to-Speech (TTS)**                   | Smooth, multilingual narration, including via your own OpenAI-compatible / LiteLLM endpoint.                           |
-| **Self-Hosted Sync**                       | Sync book files, progress, notes, and bookmarks via WebDAV, S3, Google Drive, or KOReader — all on your own servers.   |
+| **Read-Along Narration**                   | Play embedded EPUB 3 Media Overlays with timed highlighting, or pair a reflowable EPUB with your own MP3/M4A/M4B narration. |
+| **Audiobook Support**                      | Play and manage audiobooks, including streaming from a self-hosted Audiobookshelf server.                              |
+| **Self-Hosted Sync**                       | Sync book files, progress, notes, and bookmarks via WebDAV, S3, Google Drive, OneDrive, iCloud, or KOReader — all on your own servers. |
 | **Accessibility**                          | Full keyboard navigation and screen-reader support (VoiceOver, TalkBack, NVDA, Orca).                                  |
 | **Visual & Focus Aids**                    | Reading ruler, paragraph-by-paragraph mode, and speed-reading features.                                                |
 

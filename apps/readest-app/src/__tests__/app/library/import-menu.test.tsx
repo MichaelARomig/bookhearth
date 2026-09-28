@@ -28,6 +28,7 @@ describe('ImportMenu', () => {
         onImportBooksFromFiles={vi.fn()}
         onImportIntoCollection={vi.fn()}
         onOpenCatalogManager={vi.fn()}
+        onOpenFeeds={vi.fn()}
       />,
     );
 
@@ -51,6 +52,7 @@ describe('ImportMenu', () => {
         onImportBooksFromFiles={vi.fn()}
         onImportIntoCollection={onImportIntoCollection}
         onOpenCatalogManager={onOpenCatalogManager}
+        onOpenFeeds={vi.fn()}
       />,
     );
 
