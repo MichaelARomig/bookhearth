@@ -219,8 +219,18 @@ impl SwiftLinker {
             println!("cargo:rustc-link-search=native={path}");
         }
 
-        let debug = env::var("DEBUG").unwrap() == "true";
-        let configuration = if debug { "debug" } else { "release" };
+        // READEST PATCH (Xcode 27 / Swift 6.4): SPM's release config applies an
+        // optimization under this toolchain that internalizes `@_cdecl`
+        // functions with no in-module Swift caller (e.g. `register_plugin`,
+        // `run_plugin_command`) — they end up as local (`t`) symbols instead of
+        // external (`T`) ones, so the Rust side's final link fails with
+        // "symbol(s) not found for architecture arm64" even though `nm` shows
+        // them present in the .a. SPM's debug config does not apply this
+        // optimization, so build these thin bridging packages as debug
+        // regardless of the Rust build's own profile — there's no meaningful
+        // runtime cost for a few hundred lines of glue code, and it's the only
+        // configuration that reliably keeps the symbols the Rust side needs.
+        let configuration = "debug";
         let rust_target = RustTarget::from_env();
 
         link_clang_rt(&rust_target);
@@ -282,17 +292,35 @@ impl SwiftLinker {
                 panic!("Failed to compile swift package {}", package.name);
             }
 
-            // With `--triple`, swift build writes artifacts into a directory
-            // named after the unversioned triple (plus the simulator suffix),
-            // e.g. `arm64-apple-ios/release` or `arm64-apple-ios-simulator/release`.
-            let triple_dir = format!(
-                "{}{}",
-                rust_target.unversioned_swift_target_triple(),
-                matches!(rust_target.sdk, SwiftSDK::IOSSimulator)
-                    .then(|| "-simulator".to_string())
-                    .unwrap_or_default()
-            );
-            let search_path = out_path.join(triple_dir).join(configuration);
+            // READEST PATCH (Xcode 27 / Swift 6.4): with `--triple` + `--sdk`,
+            // older SPM wrote artifacts under a triple-named directory (e.g.
+            // `arm64-apple-ios/release`), which is what this used to hand-format.
+            // Newer SPM (bundled with Xcode 27) instead uses the XCBuild-style
+            // layout (`Products/Release-iphoneos`), so a hand-formatted guess goes
+            // stale across SPM versions. `swift build --show-bin-path`, run with
+            // the exact same flags, is SPM's own documented way to report the
+            // real output directory regardless of layout — ask it instead of
+            // guessing.
+            let mut show_bin_path = Command::new("swift");
+            show_bin_path.current_dir(&package.path);
+            show_bin_path
+                .arg("build")
+                .args(["--triple", &swift_target_triple])
+                .args(["--sdk", sdk_path.trim()])
+                .args(["-c", configuration])
+                .args(["--build-path", &out_path.display().to_string()])
+                .arg("--show-bin-path");
+            show_bin_path.env_remove("SDKROOT");
+
+            let show_bin_path_output = show_bin_path.output().unwrap();
+            if !show_bin_path_output.status.success() {
+                panic!(
+                    "Failed to resolve the build output directory for swift package {} with `swift build --show-bin-path`",
+                    package.name
+                );
+            }
+            let search_path =
+                PathBuf::from(String::from_utf8_lossy(&show_bin_path_output.stdout).trim());
 
             println!("cargo:rerun-if-changed={}", package_path.display());
             println!("cargo:rustc-link-search=native={}", search_path.display());
