@@ -148,21 +148,25 @@ branches, no AI co-author trailers, per project convention):
       CI/release/worktree parity — it's an internal build input) with the
       Bookhearth 1024 master so those regen paths stay on-brand. Provenance +
       regen steps documented in `data/icons/README.md`.
-- [ ] **Follow-up:** the Android 13+ **themed (monochrome) launcher icon** still
-      uses the old silhouette — `ic_launcher_monochrome.png` (all densities) is a
-      tracked customization that `tauri icon` does NOT regenerate, and
-      IconKitchen-Output shipped no monochrome source. Generate a Bookhearth
-      monochrome/silhouette asset and replace those mipmaps to finish the Android
-      themed-icon rebrand.
-- [ ] **Fix the app icons — the current set isn't right.** The icons regenerated
-      2026-07-16 (see the Done item above) came out not-quite-right / not the
-      intended Bookhearth design. Low priority. To replace: drop a corrected
-      1024px master at `data/icons/readest-book.png` (the tracked source — keep
-      the filename for CI/worktree parity), then
-      `cd apps/readest-app && pnpm tauri icon ../../data/icons/readest-book.png`,
-      recopy `IconKitchen-Output/web/*` → `public/`, and restore the Android
-      `<monochrome>` adaptive-icon customization (see the follow-up above). Full
-      steps in `data/icons/README.md`.
+- [x] **Done (2026-10-03): app icons replaced with the BookHearth stone-arch
+      design** from the BookHearth icon pack (supersedes the 2026-07-16 green
+      IconKitchen set). New 1024 master in `data/icons/readest-book.png`;
+      desktop/Windows/iOS/Android-source/web/PWA/extension/Calibre/TTS/fastlane
+      icons all replaced; Android themed `ic_launcher_monochrome.png` mipmaps
+      now carry a BookHearth arch silhouette (closes the monochrome follow-up).
+      Fixes found while installing: `values/ic_launcher_background.xml` is now
+      **tracked** at `#FF09252D` (`tauri icon` writes `#fff`, which left a white
+      ring around the 22%-inset foreground in CI builds), and the splash
+      background moved `#323130` → `#FF09252D` to match the opaque splash icon.
+      Legacy `icons/android/mipmap-hdpi/ic_launcher*.png` fixed 49px → 72px.
+      Details in `data/icons/README.md`.
+- [ ] **Follow-up: sharpen the themed (monochrome) icon.** The pack's
+      silhouette is derived from color distance, so the book's glow renders as a
+      soft blob inside the arch on Android 13+ themed icons. A crisp hand-drawn
+      arch + book silhouette would read better. Low priority.
+- [ ] **Follow-up: verify on device** — Android adaptive/round/themed launcher
+      + splash, iOS home screen (`gen/apple/Assets.xcassets` is untracked; copy
+      the AppIcon set before a local iOS build), macOS dock, Windows taskbar.
 
 ## Backlog — Collections / folders discoverability
 
