@@ -19,16 +19,41 @@ pnpm build-ios-sideload          # ~15–40 min on a cold build; produces the .i
 
 Output: `apps/readest-app/src-tauri/gen/apple/build/Bookhearth-unsigned.ipa`
 
+Every successful build also rewrites [`binary-here.md`](../../../binary-here.md)
+at the repo root with the build time, app version, source commit and the
+install's expiry date.
+
 Then in **Sideloadly**: drag in that `.ipa`, set the options in
 [Sideloadly settings](#sideloadly-settings), and install to your connected
 device. Trust the developer profile on-device the first time
 (**Settings → General → VPN & Device Management → your Apple ID → Trust**).
 
+## First build from a fresh clone
+
+On a new machine or a new clone, do the [one-time prerequisites](#one-time-prerequisites)
+below, then:
+
+```bash
+git clone --recurse-submodules git@github.com:MichaelARomig/bookhearth.git
+cd bookhearth
+git submodule update --init --recursive   # if you cloned without --recurse-submodules
+pnpm install                              # repo root
+cd apps/readest-app
+pnpm build-ios-sideload
+```
+
+The script checks Xcode, XcodeGen, CocoaPods, the rustup iOS target, the
+submodules and `node_modules` before it starts, and stops with the exact
+command to fix anything missing. It then sets up the rest itself, once:
+`pnpm setup-vendors` (the gitignored `public/vendor/`) and `tauri ios init`
+(the untracked `gen/apple` scaffolding, see below).
+
 ---
 
 ## One-time prerequisites
 
-Do these once. The build script assumes they're in place.
+Do these once per machine. The build script checks for them and stops with
+the fix if one is missing.
 
 1. **Full Xcode selected** (not just Command Line Tools):
    ```bash
@@ -145,5 +170,5 @@ prompt and display name, and the Share Extension / Widget display names.
   (force-added past the `gen/` gitignore) because Tauri only generates it from
   `productName`, which no longer matches the `Readest_iOS` project name. See its
   keys (bundle id, `readest://` + Google-OAuth URL schemes, doc types, locales).
-- App-extension version strings (`1.0`) don't match the app (`0.11.18`) — a
+- App-extension version strings (`1.0`) don't match the app version (`CFBundleShortVersionString`, e.g. `0.12.10`) — a
   harmless warning here; only matters for a real App Store submission.

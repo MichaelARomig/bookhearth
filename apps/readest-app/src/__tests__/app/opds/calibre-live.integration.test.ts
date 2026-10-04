@@ -1,12 +1,19 @@
 /**
- * Live integration against the workspace calibre-server fixture.
+ * Live integration against a Calibre Content Server on the LAN.
  *
- * Expects:
- *   calibre-server --port 8080 --enable-auth --auth-mode=basic ...
- *   user qa / qapass
- *   OPDS root http://127.0.0.1:8080/opds
+ * Defaults to the home server (Calibre Content Server at
+ * http://192.168.1.244:2665, OPDS root /opds; Calibre-Web runs separately on
+ * :2666/:2667 and is not what this suite exercises). Override with
+ * CALIBRE_OPDS_BASE / CALIBRE_OPDS_USER / CALIBRE_OPDS_PASS.
  *
- * Skips the whole suite when the server is unreachable so unit CI stays green.
+ * The server is not always up, and its login is not committed. The whole suite
+ * SKIPS unless the probe gets an authenticated OPDS feed from Calibre, so a
+ * server that is down, a wrong/missing login, or an unrelated service on the
+ * port (previously the old default 127.0.0.1:8080 hit a different local app
+ * and failed instead of skipping) never breaks `pnpm test` or the pre-push hook.
+ *
+ * When it does run, the content tests assume the library has at least one
+ * EPUB under "By Newest" and a title matching "Alice".
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getFeed } from 'foliate-js/opds.js';
@@ -21,7 +28,7 @@ import { fetchWithAuth, createBasicAuth } from '@/app/opds/utils/opdsReq';
 import { getAcquisitionLink } from '@/services/opds/feedChecker';
 import type { OPDSFeed } from '@/types/opds';
 
-const BASE = process.env['CALIBRE_OPDS_BASE'] ?? 'http://127.0.0.1:8080';
+const BASE = process.env['CALIBRE_OPDS_BASE'] ?? 'http://192.168.1.244:2665';
 const USER = process.env['CALIBRE_OPDS_USER'] ?? 'qa';
 const PASS = process.env['CALIBRE_OPDS_PASS'] ?? 'qapass';
 const ROOT = `${BASE}/opds`;
@@ -34,7 +41,9 @@ beforeAll(async () => {
       headers: { Authorization: createBasicAuth(USER, PASS) },
       signal: AbortSignal.timeout(3000),
     });
-    serverUp = res.ok;
+    // Must be an authenticated Calibre OPDS feed, not just any 200 on the port.
+    const body = res.ok ? await res.text() : '';
+    serverUp = /<feed[\s>]/.test(body) && /calibre/i.test(body);
   } catch {
     serverUp = false;
   }
@@ -42,7 +51,9 @@ beforeAll(async () => {
 
 const live = () => {
   if (!serverUp) {
-    console.warn(`[skip] calibre-server not reachable at ${ROOT}`);
+    console.warn(
+      `[skip] no authenticated Calibre OPDS feed at ${ROOT} (server down, or set CALIBRE_OPDS_USER/CALIBRE_OPDS_PASS)`,
+    );
   }
   return serverUp;
 };

@@ -53,6 +53,31 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # for this build only.
 export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-Cembed-bitcode=no"
 
+# --- 1a. prerequisites (fail fast with the fix, not 10 minutes in) ----------
+REPO_ROOT="$(cd "$APP_DIR/../.." && pwd)"
+missing=()
+xcodebuild -version >/dev/null 2>&1 \
+  || missing+=("full Xcode:     sudo xcode-select -s /Applications/Xcode.app/Contents/Developer")
+command -v xcodegen >/dev/null || missing+=("XcodeGen:       brew install xcodegen")
+command -v pod >/dev/null || missing+=("CocoaPods:      brew install cocoapods")
+if ! command -v rustup >/dev/null \
+  || ! rustup target list --installed | grep -qx aarch64-apple-ios; then
+  missing+=("rustup + iOS:   rustup target add aarch64-apple-ios aarch64-apple-ios-sim")
+fi
+[ -f "$REPO_ROOT/packages/foliate-js/package.json" ] \
+  || missing+=("submodules:     git submodule update --init --recursive")
+[ -d "$APP_DIR/node_modules" ] || missing+=("JS deps:        pnpm install   (repo root)")
+if [ ${#missing[@]} -gt 0 ]; then
+  echo "ERROR: missing prerequisites (see docs/ios-sideload-build.md):" >&2
+  printf '  - %s\n' "${missing[@]}" >&2
+  exit 1
+fi
+# public/vendor is gitignored; a fresh clone needs it generated once.
+if [ ! -d "$APP_DIR/public/vendor/pdfjs" ]; then
+  echo "==> vendor assets missing; running pnpm setup-vendors (one-time)"
+  ( cd "$APP_DIR" && pnpm setup-vendors )
+fi
+
 # --- 1b. one-time iOS scaffolding (fresh clone / worktree) -------------------
 # Only gen/apple's customized files are tracked; the rest (Sources/, Externals/,
 # assets/, LaunchScreen.storyboard, Podfile) comes from `tauri ios init`.
@@ -123,6 +148,41 @@ find "$WORK" -name '._*' -delete
 rm -f "$OUT"
 ( cd "$WORK" && zip -qrX "$OUT" Payload )   # zip (not ditto): no ._ junk
 rm -rf "$WORK"
+
+# --- 6. record this build in <repo>/binary-here.md ---------------------------
+# Rewritten on every successful build so the repo always says where the latest
+# .ipa is, what it was built from, and when the free-team install expires.
+BUILT="$(date '+%Y-%m-%d %H:%M %Z')"
+EXPIRES="$(date -v+7d '+%Y-%m-%d')"
+SIZE_MB="$(( $(stat -f %z "$OUT") / 1048576 ))"
+VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ARCHIVE_APP/Info.plist")"
+COMMIT="$(cd "$REPO_ROOT" && git rev-parse --short HEAD)"
+( cd "$REPO_ROOT" && git diff --quiet HEAD -- apps ) || COMMIT="$COMMIT + uncommitted changes"
+cat > "$REPO_ROOT/binary-here.md" <<EOF
+# Bookhearth iOS build
+
+Latest unsigned sideload \`.ipa\` (universal: iPhone + iPad, iOS 16.4+):
+
+\`\`\`
+apps/readest-app/src-tauri/gen/apple/build/Bookhearth-unsigned.ipa
+\`\`\`
+
+| | |
+|---|---|
+| Built | $BUILT |
+| App version | $VERSION |
+| Source commit | \`$COMMIT\` |
+| Size | ~$SIZE_MB MB |
+| Free-team install expires | ~$EXPIRES (7 days after install) |
+
+Install with Sideloadly (bundle ID \`com.michaelromig.bookhearth\`, your free
+Apple ID, strip unsupported entitlements; tick "Remove app extensions" if it
+hits the 3-app-ID limit). Rebuild with \`pnpm build-ios-sideload\` from
+\`apps/readest-app\` — this file is rewritten automatically by every successful
+build. Full instructions in
+[\`apps/readest-app/docs/ios-sideload-build.md\`](apps/readest-app/docs/ios-sideload-build.md).
+EOF
+echo "  updated binary-here.md"
 
 echo ""
 echo "✅ Unsigned .ipa ready:"
