@@ -39,17 +39,32 @@ Do these once. The build script assumes they're in place.
    ```bash
    rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
    ```
-3. **CocoaPods + libimobiledevice** (Tauri's iOS tooling uses them):
+3. **CocoaPods, XcodeGen + libimobiledevice** (Tauri's iOS tooling and the
+   build script use them):
    ```bash
-   brew install cocoapods            # libimobiledevice is pulled in by tauri ios init
+   brew install cocoapods xcodegen   # libimobiledevice is pulled in by tauri ios init
    ```
+   After an Xcode update, also run `xcodebuild -runFirstLaunch` (otherwise
+   xcodebuild logs CoreDevice-plugin / "CoreSimulator is out of date" noise).
 4. **An Apple ID in Xcode** (free is fine): Xcode → Settings → Accounts → **+** →
    Apple ID. This is used by *Sideloadly*, not by this build.
 5. **Sideloadly** installed (<https://sideloadly.io>) and your device trusting
    this Mac.
 
-If `src-tauri/gen/apple` was never initialized on this machine, run once:
-`PATH="$HOME/.cargo/bin:$PATH" pnpm exec tauri ios init --ci`.
+A fresh clone only has the tracked `src-tauri/gen/apple` files (without the
+rest, xcodegen fails with `missing source directory … gen/apple/Sources`).
+**The build script handles this.** If `gen/apple/Sources` is missing, it runs
+`tauri ios init --ci` once and then `git checkout -- src-tauri/gen/apple` to
+restore the tracked customizations init rewrites. The app-icon catalog
+(`gen/apple/Assets.xcassets`) is **tracked**, so the BookHearth icons come back
+with that checkout. Keep it in sync with `src-tauri/icons/ios/` when the icons
+change; see `data/icons/README.md`.
+
+**Global Cargo config:** keep host-tuning `rustflags` (`target-cpu=native`,
+`embed-bitcode=yes`) under `[target.aarch64-apple-darwin]` in
+`~/.cargo/config.toml`, **not** under `[build]`, because `[build]` leaks into the
+iOS cross-compile (see below). The script also overrides the iOS target's
+rustflags as a backstop.
 
 ## Sideloadly settings
 
@@ -103,6 +118,15 @@ the reasoning:
   dies with `can't find crate for std (aarch64-apple-ios)`. Per project policy
   we don't touch the global env; the script prepends `~/.cargo/bin` to PATH for
   the build only. (If you'd rather fix it globally: `brew unlink rust`.)
+
+- **A global `~/.cargo/config.toml` `[build] rustflags` breaks the iOS
+  compile.** `-C embed-bitcode=yes` there makes cc-rs pass
+  `-fembed-bitcode=all`, which Xcode 27's clang rejects together with
+  `-ffunction-sections` (`zstd-sys` build script fails: `-ffunction-sections is
+  not supported with -fembed-bitcode`); `-C target-cpu=native` would also tune
+  for the Mac, not the phone. The script sets
+  `CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS`, which replaces `[build] rustflags`
+  for the iOS target only.
 
 - **Packaging with `ditto` injects `._AppleDouble` junk** into the zip. The
   script strips extended attributes and uses `zip` so the `.ipa` is clean

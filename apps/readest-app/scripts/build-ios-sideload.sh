@@ -44,6 +44,27 @@ trap restore EXIT
 # (see docs).
 export PATH="$HOME/.cargo/bin:$PATH"
 
+# A global ~/.cargo/config.toml [build] rustflags (e.g. `-C embed-bitcode=yes`,
+# `-C target-cpu=native`) leaks into the iOS cross-compile: cc-rs turns
+# embed-bitcode into `-fembed-bitcode=all`, which Xcode 27's clang rejects
+# alongside `-ffunction-sections` (zstd-sys fails), and target-cpu=native
+# tunes for this Mac rather than the phone. Target-specific rustflags replace
+# [build] rustflags outright, so this pins the iOS target to known-good flags
+# for this build only.
+export CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS="-Cembed-bitcode=no"
+
+# --- 1b. one-time iOS scaffolding (fresh clone / worktree) -------------------
+# Only gen/apple's customized files are tracked; the rest (Sources/, Externals/,
+# assets/, LaunchScreen.storyboard, Podfile) comes from `tauri ios init`.
+# Without it xcodegen fails with "missing source directory .../Sources". init
+# also rewrites tracked files, so restore them (incl. the BookHearth AppIcon
+# catalog in Assets.xcassets) right after.
+if [ ! -d "$GEN/Sources" ]; then
+  echo "==> gen/apple not initialized; running tauri ios init (one-time)"
+  ( cd "$APP_DIR" && pnpm exec tauri ios init --ci )
+  ( cd "$APP_DIR" && git checkout -- src-tauri/gen/apple )
+fi
+
 # --- 2. temporarily disable code signing ------------------------------------
 # tauri ios build validates signing up front and aborts before compiling if it
 # can't resolve the team/profile. Inject a project-level no-signing block so it

@@ -72,8 +72,8 @@ needs live in the repo. (History: Readest logo → green IconKitchen book,
    and the store icon `fastlane/metadata/android/en-US/images/icon.png`
    (`fastlane/metadata-play/...` is a symlink to it).
 
-5. **iOS asset catalog** — `src-tauri/gen/apple/Assets.xcassets` is referenced
-   by `gen/apple/project.yml` but is **untracked** and not created by
-   `tauri icon`. Copy the `AppIcon.appiconset` (from the icon pack, or from
-   `src-tauri/icons/ios/` + a `Contents.json`) there before a local
-   `pnpm build-ios*` / sideload build.
+5. **iOS asset catalog**: `src-tauri/gen/apple/Assets.xcassets` (referenced by
+   `gen/apple/project.yml`) is **tracked** (force-added past the `gen/`
+   .gitignore) as of 2026-10-03. `tauri icon` neither creates nor refreshes
+   it, so when icons change, copy `src-tauri/icons/ios/AppIcon-*.png` into
+   `AppIcon.appiconset/`. The filenames match one to one.
