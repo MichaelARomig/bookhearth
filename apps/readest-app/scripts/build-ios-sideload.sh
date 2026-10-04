@@ -157,7 +157,10 @@ EXPIRES="$(date -v+7d '+%Y-%m-%d')"
 SIZE_MB="$(( $(stat -f %z "$OUT") / 1048576 ))"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ARCHIVE_APP/Info.plist")"
 COMMIT="$(cd "$REPO_ROOT" && git rev-parse --short HEAD)"
-( cd "$REPO_ROOT" && git diff --quiet HEAD -- apps ) || COMMIT="$COMMIT + uncommitted changes"
+# Ignore gen/apple: the build's own temporary edits (DIRTY, restored on exit)
+# are still in place at this point and would always read as "uncommitted".
+( cd "$REPO_ROOT" && git diff --quiet HEAD -- apps ':(exclude)apps/readest-app/src-tauri/gen/apple' ) \
+  || COMMIT="$COMMIT + uncommitted changes"
 cat > "$REPO_ROOT/binary-here.md" <<EOF
 # Bookhearth iOS build
 
