@@ -114,9 +114,28 @@ else:
     print("  no-signing block already present")
 PY
 
-# regenerate the Xcode project so the pbxproj carries CODE_SIGNING_ALLOWED=NO
-xcodegen generate --spec "$PROJ_YML" >/dev/null
+# regenerate the Xcode project so the pbxproj carries CODE_SIGNING_ALLOWED=NO.
+# Unset FORCE_COLOR first: pnpm sets it to 0 when stdout is not a terminal,
+# and XcodeGen substitutes ${FORCE_COLOR} from the environment into the
+# "Build Rust Code" script. The tauri xcode-script command then treats that
+# 0 as a CPU architecture and aborts ("isn't a known arch").
+env -u FORCE_COLOR xcodegen generate --spec "$PROJ_YML" >/dev/null
 echo "  regenerated Xcode project"
+
+# XcodeGen leaves a literal ${FORCE_COLOR} in the script when the variable is
+# unset. xcodebuild still inherits FORCE_COLOR from pnpm, so the shell would
+# expand it to 0 at build time. Drop the token. Color is unused by xcode-script.
+PBXPROJ="$GEN/Readest.xcodeproj/project.pbxproj"
+python3 - "$PBXPROJ" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+needle = "${FORCE_COLOR} "
+if needle not in s:
+    sys.exit("ERROR: Build Rust Code script has no ${FORCE_COLOR} token to strip")
+open(p, "w").write(s.replace(needle, ""))
+print("  stripped FORCE_COLOR from the Rust build script")
+PY
 
 # --- 3. build the device app -------------------------------------------------
 # The .ipa EXPORT step will fail ("No Account for Team ..." / "No profiles") —

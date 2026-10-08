@@ -7,7 +7,7 @@ import { isOPDSCatalog, getPublication, getFeed, getOpenSearch } from 'foliate-j
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useEnv } from '@/context/EnvContext';
 import { useAuth } from '@/context/AuthContext';
-import { isWebAppPlatform } from '@/services/environment';
+import { isTauriAppPlatform, isWebAppPlatform } from '@/services/environment';
 import { downloadFile } from '@/libs/storage';
 import { Toast } from '@/components/Toast';
 import { useThemeStore } from '@/store/themeStore';
@@ -48,7 +48,12 @@ import { getPublicationDetailHref, parsePublicationDocument } from './utils/opds
 import { ImportError } from '@/services/errors';
 import { READEST_OPDS_USER_AGENT } from '@/services/constants';
 import { findBookByOPDSSources, upsertOPDSSourceMapping } from '@/services/opds/sourceMap';
-import { applyOPDSCover, getOPDSCoverHref, getOPDSImageCacheFilename } from '@/services/opds/cover';
+import {
+  applyOPDSCover,
+  getOPDSCoverHref,
+  getOPDSImageCacheFilename,
+  opdsImageNeedsNativeFetch,
+} from '@/services/opds/cover';
 import { applyOPDSMetadata, getOPDSBookMetadata } from '@/services/opds/metadata';
 import { buildPseStreamFileName } from '@/services/opds/pseStream';
 import { md5 } from '@/utils/md5';
@@ -587,7 +592,11 @@ export default function BrowserPage() {
       type?: string,
       onProgress?: (progress: { progress: number; total: number }) => void,
     ) => {
-      if (!appService || !libraryLoaded) return;
+      // Returning nothing used to toast "Download completed" without fetching
+      // the file, so the first taps on Download EPUB appeared to do nothing.
+      if (!appService || !libraryLoaded) {
+        throw new Error(_('Library is still loading. Try again in a moment.'));
+      }
       try {
         const url = resolveURL(href, state.baseURL);
         const parsed = parseMediaType(type);
@@ -764,6 +773,7 @@ export default function BrowserPage() {
       catalogSourceId,
       publication,
       publicationCoverHref,
+      _,
     ],
   );
 
@@ -880,7 +890,15 @@ export default function BrowserPage() {
       const username = usernameRef.current || '';
       const password = passwordRef.current || '';
       const customHeaders = customHeadersRef.current;
-      if (!username && !password && Object.keys(customHeaders).length === 0) {
+      // No credentials: the webview can load the image itself, except cleartext
+      // http on the native app. iPad's webview refuses those (no ATS exception),
+      // which is why a Calibre shelf shows titles and no covers.
+      if (
+        !username &&
+        !password &&
+        Object.keys(customHeaders).length === 0 &&
+        !opdsImageNeedsNativeFetch(url, isTauriAppPlatform())
+      ) {
         return needsProxy(url) ? getProxiedURL(url, '', true) : url;
       }
 

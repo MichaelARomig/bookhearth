@@ -45,6 +45,7 @@ describe('ImportMenuPopup', () => {
     renderPopup();
 
     expect(screen.getByRole('menuitem', { name: 'From Local File' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Calibre' })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'From Feed URL' })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'Online Library' })).toBeTruthy();
     expect(screen.queryByRole('menuitem', { name: 'From Directory' })).toBeNull();

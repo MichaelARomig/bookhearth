@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   updateCornerRadius: vi.fn(),
   focus: undefined as ((event: { payload: boolean }) => void) | undefined,
   unlisten: vi.fn(),
+  platform: 'ios',
 }));
 
 vi.mock('@/context/EnvContext', () => ({ useEnv: () => ({ appService: h.appService }) }));
@@ -18,7 +19,7 @@ vi.mock('@/store/themeStore', () => ({
   }),
 }));
 vi.mock('@/utils/bridge', () => ({ getSafeAreaInsets: h.getInsets }));
-vi.mock('@/utils/misc', () => ({ getOSPlatform: () => 'ios' }));
+vi.mock('@/utils/misc', () => ({ getOSPlatform: () => h.platform }));
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
     onFocusChanged: (listener: typeof h.focus) => {
@@ -44,6 +45,17 @@ it('refreshes CarPlay-only insets when the native phone window gains focus', asy
 
   unmount();
   await waitFor(() => expect(h.unlisten).toHaveBeenCalledOnce());
+});
+
+it('keeps an iPad top inset when the native bridge reports none, so the clock does not cover back and home', async () => {
+  h.platform = 'macos';
+  h.getInsets.mockResolvedValue({ top: 0, right: 0, bottom: 0, left: 0 });
+  const { unmount } = renderHook(() => useSafeAreaInsets());
+  await waitFor(() =>
+    expect(h.updateInsets).toHaveBeenCalledWith({ top: 24, right: 0, bottom: 0, left: 0 }),
+  );
+  unmount();
+  h.platform = 'ios';
 });
 
 it('reports the rounded bottom corner radius from the native bridge', async () => {

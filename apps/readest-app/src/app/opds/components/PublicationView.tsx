@@ -1,7 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IoPricetag } from 'react-icons/io5';
 import { MdArrowDropDown } from 'react-icons/md';
@@ -66,6 +66,11 @@ export function PublicationView({
   const _ = useTranslation();
   const router = useRouter();
   const [downloading, setDownloading] = useState(false);
+  // iPad often delivers pointerdown and then drops the click (a layout shift
+  // from the entry document, or the webview treating the first tap as hover).
+  // Starting on pointerdown makes the first tap count; the flag ignores the
+  // click from that same gesture so the file is not fetched twice.
+  const downloadInFlight = useRef(false);
   // Seeded from existingBook so users who reopen a publication they've already
   // downloaded see "Open & Read" immediately, without having to re-download.
   // When existingBook later changes (parent switches to a different
@@ -165,6 +170,8 @@ export function PublicationView({
       navigateToReader(router, [downloadedBook.hash]);
       return;
     }
+    if (downloadInFlight.current) return;
+    downloadInFlight.current = true;
 
     setDownloading(true);
     setProgress(null);
@@ -176,9 +183,13 @@ export function PublicationView({
           setProgress(percentage);
         }
       });
-      if (book) {
-        setDownloadedBook(book);
+      // A silent no-op (library not ready, empty result) used to toast
+      // "Download completed" anyway, so the first taps looked like they did
+      // nothing and the user had to tap again.
+      if (!book) {
+        throw new Error(_('Download did not start'));
       }
+      setDownloadedBook(book);
       eventDispatcher.dispatch('toast', { type: 'success', message: _('Download completed') });
     } catch (error) {
       console.error('Download failed:', error);
@@ -192,13 +203,20 @@ export function PublicationView({
       } else {
         eventDispatcher.dispatch('toast', {
           type: 'error',
-          message: _('Download failed') + `:\n${href}`,
+          message:
+            _('Download failed') +
+            `:\n${error instanceof Error && error.message ? error.message : href}`,
         });
       }
     } finally {
+      downloadInFlight.current = false;
       setDownloading(false);
       setProgress(null);
     }
+  };
+
+  const beginDownload = (href: string, type?: string, forceDownload = false) => {
+    void handleActionButton(href, type, forceDownload);
   };
 
   // `formatExt` names the format the button would fetch. Only the generic
@@ -267,11 +285,15 @@ export function PublicationView({
     <div className='flex gap-px'>
       <button
         type='button'
+        onPointerDown={(event) => {
+          if (event.pointerType === 'mouse' && event.button !== 0) return;
+          onPrimary();
+        }}
         onClick={onPrimary}
         disabled={downloading}
         className={clsx(
           solid ? SOLID_ACTION : FLAT_ACTION,
-          'min-w-20 rounded-l-3xl rounded-r-none px-4',
+          'touch-manipulation min-w-20 rounded-l-3xl rounded-r-none px-4',
         )}
       >
         {label}
@@ -399,9 +421,16 @@ export function PublicationView({
                             re-downloading drops to flat. */}
                         <button
                           type='button'
-                          onClick={() => handleActionButton(preferred.href!, preferred.type)}
+                          onPointerDown={(event) => {
+                            if (event.pointerType === 'mouse' && event.button !== 0) return;
+                            beginDownload(preferred.href!, preferred.type);
+                          }}
+                          onClick={() => beginDownload(preferred.href!, preferred.type)}
                           disabled={downloading}
-                          className={clsx(SOLID_ACTION, 'min-w-20 rounded-3xl px-4')}
+                          className={clsx(
+                            SOLID_ACTION,
+                            'touch-manipulation min-w-20 rounded-3xl px-4',
+                          )}
                         >
                           {_('Open & Read')}
                         </button>
@@ -415,11 +444,16 @@ export function PublicationView({
                         ) : (
                           <button
                             type='button'
-                            onClick={() =>
-                              handleActionButton(preferred.href!, preferred.type, true)
-                            }
+                            onPointerDown={(event) => {
+                              if (event.pointerType === 'mouse' && event.button !== 0) return;
+                              beginDownload(preferred.href!, preferred.type, true);
+                            }}
+                            onClick={() => beginDownload(preferred.href!, preferred.type, true)}
                             disabled={downloading}
-                            className={clsx(FLAT_ACTION, 'min-w-20 rounded-3xl px-4')}
+                            className={clsx(
+                              FLAT_ACTION,
+                              'touch-manipulation min-w-20 rounded-3xl px-4',
+                            )}
                           >
                             {_('Download Again')}
                           </button>
@@ -428,16 +462,23 @@ export function PublicationView({
                     ) : !showCaret ? (
                       <button
                         type='button'
-                        onClick={() => handleActionButton(preferred.href!, preferred.type)}
+                        onPointerDown={(event) => {
+                          if (event.pointerType === 'mouse' && event.button !== 0) return;
+                          beginDownload(preferred.href!, preferred.type);
+                        }}
+                        onClick={() => beginDownload(preferred.href!, preferred.type)}
                         disabled={downloading}
-                        className={clsx(SOLID_ACTION, 'min-w-20 rounded-3xl px-4')}
+                        className={clsx(
+                          SOLID_ACTION,
+                          'touch-manipulation min-w-20 rounded-3xl px-4',
+                        )}
                       >
                         {primaryLabel}
                       </button>
                     ) : hasDefaultAction ? (
                       splitDownloadButton(
                         primaryLabel,
-                        () => handleActionButton(preferred.href!, preferred.type),
+                        () => beginDownload(preferred.href!, preferred.type),
                         menuLinks,
                       )
                     ) : (

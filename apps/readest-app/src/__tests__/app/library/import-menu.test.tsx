@@ -34,6 +34,7 @@ describe('ImportMenu', () => {
 
     expect(screen.getByText('From Local File')).toBeTruthy();
     expect(screen.getByText('Import into Collection')).toBeTruthy();
+    expect(screen.getByText('Calibre')).toBeTruthy();
     expect(screen.getByText('OPDS / Calibre Catalogs')).toBeTruthy();
   });
 
@@ -60,8 +61,11 @@ describe('ImportMenu', () => {
     expect(onImportIntoCollection).toHaveBeenCalledTimes(1);
     expect(setIsDropdownOpen).toHaveBeenLastCalledWith(false);
 
-    fireEvent.click(screen.getByText('Online Library'));
+    fireEvent.click(screen.getByText('Calibre'));
     expect(onOpenCatalogManager).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByText('Online Library'));
+    expect(onOpenCatalogManager).toHaveBeenCalledTimes(2);
     expect(setIsDropdownOpen).toHaveBeenLastCalledWith(false);
   });
 });

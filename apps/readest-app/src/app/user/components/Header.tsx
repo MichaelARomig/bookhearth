@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { IoArrowBack } from 'react-icons/io5';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useThemeStore } from '@/store/themeStore';
 import { useTrafficLightStore } from '@/store/trafficLightStore';
 import WindowButtons from '@/components/WindowButtons';
 
@@ -13,6 +14,7 @@ interface ProfileHeaderProps {
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ onGoBack }) => {
   const _ = useTranslation();
   const { appService } = useEnv();
+  const { safeAreaInsets } = useThemeStore();
   const { isTrafficLightVisible } = useTrafficLightStore();
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +32,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ onGoBack }) => {
         // and only its own controls stay interactive.
         !appService?.hasWindowBar && 'pointer-events-none',
       )}
+      // `fixed` ignores the page's padding, so without an explicit top the
+      // back button sits at y=0, under the iPad status-bar clock.
+      style={{ top: safeAreaInsets?.top || 0 }}
     >
       <button
         aria-label={_('Go Back')}

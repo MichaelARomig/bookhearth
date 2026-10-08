@@ -1,8 +1,7 @@
 import clsx from 'clsx';
 import { MdLanguage, MdMenuBook, MdRssFeed } from 'react-icons/md';
-import { LuLibrary } from 'react-icons/lu';
+import { LuFolderPlus, LuLibrary, LuServer } from 'react-icons/lu';
 import { IoFileTray } from 'react-icons/io5';
-import { LuFolderPlus } from 'react-icons/lu';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getCatalogUiLabel } from '@/app/opds/utils/catalogUi';
@@ -96,6 +95,11 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
         />
       )}
       <hr aria-hidden='true' className='border-base-200 my-1' />
+      <MenuItem
+        label={_('Calibre')}
+        Icon={<LuServer className='h-5 w-5' />}
+        onClick={handleOpenCatalogManager}
+      />
       {onImportFromWebBrowser && (
         <MenuItem
           label={_('From Web Browser')}

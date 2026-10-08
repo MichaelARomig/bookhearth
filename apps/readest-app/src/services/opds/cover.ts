@@ -54,6 +54,25 @@ export const getOPDSCoverHref = (publication: {
 export const getOPDSImageCacheFilename = (url: string, updated?: string): string =>
   `img_${md5(updated ? `${url}\n${updated}` : url)}.png`;
 
+/**
+ * Cleartext cover URLs cannot be handed to the iOS webview. The shipped app
+ * has no App Transport Security exception, so WKWebView drops `http://`
+ * images while the native HTTP client (used for the OPDS feed) still loads
+ * the catalog. Titles show up and covers do not. Those images have to be
+ * downloaded natively and shown from the asset cache.
+ *
+ * HTTPS covers stay with the webview. The web build is unaffected: it loads
+ * images through the OPDS proxy, which is already HTTPS.
+ */
+export const opdsImageNeedsNativeFetch = (url: string, tauriApp: boolean): boolean => {
+  if (!tauriApp) return false;
+  try {
+    return new URL(url).protocol === 'http:';
+  } catch {
+    return false;
+  }
+};
+
 interface ApplyOPDSCoverParams {
   appService: AppService;
   /** Imported book; its `coverHash`/`coverImageUrl` are updated in place. */

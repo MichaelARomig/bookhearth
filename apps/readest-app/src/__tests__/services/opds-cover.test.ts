@@ -21,7 +21,12 @@ vi.mock('@/app/opds/utils/opdsReq', () => ({
 }));
 
 import { md5 } from 'js-md5';
-import { applyOPDSCover, getOPDSCoverHref, getOPDSImageCacheFilename } from '@/services/opds/cover';
+import {
+  applyOPDSCover,
+  getOPDSCoverHref,
+  getOPDSImageCacheFilename,
+  opdsImageNeedsNativeFetch,
+} from '@/services/opds/cover';
 import { downloadFile } from '@/libs/storage';
 import { probeAuth, getProxiedURL, needsProxy } from '@/app/opds/utils/opdsReq';
 
@@ -193,6 +198,13 @@ describe('getOPDSImageCacheFilename', () => {
     const after = getOPDSImageCacheFilename(url, '2025-06-01T00:00:00Z');
     expect(before).not.toBe(after);
     expect(before).not.toBe(getOPDSImageCacheFilename(url));
+  });
+
+  it('fetches cleartext covers natively on the iOS app, where the webview blocks http', () => {
+    expect(opdsImageNeedsNativeFetch('http://192.168.1.20:8080/get/cover/1', true)).toBe(true);
+    expect(opdsImageNeedsNativeFetch('https://192.168.1.20:8080/get/cover/1', true)).toBe(false);
+    expect(opdsImageNeedsNativeFetch('http://192.168.1.20:8080/get/cover/1', false)).toBe(false);
+    expect(opdsImageNeedsNativeFetch('not a url', true)).toBe(false);
   });
 
   it('is stable for the same URL and updated value', () => {

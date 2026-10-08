@@ -8,11 +8,11 @@ apps/readest-app/src-tauri/gen/apple/build/Bookhearth-unsigned.ipa
 
 | | |
 |---|---|
-| Built | 2026-10-03 22:56 CDT |
+| Built | 2026-10-08 16:59 CDT |
 | App version | 0.12.10 |
-| Source commit | `a8f45d681` |
+| Source commit | `e633af8d1 + uncommitted changes` |
 | Size | ~31 MB |
-| Free-team install expires | ~2026-10-10 (7 days after install) |
+| Free-team install expires | ~2026-10-15 (7 days after install) |
 
 Install with Sideloadly (bundle ID `com.michaelromig.bookhearth`, your free
 Apple ID, strip unsupported entitlements; tick "Remove app extensions" if it

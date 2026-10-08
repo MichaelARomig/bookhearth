@@ -1443,7 +1443,14 @@ class NativeBridgePlugin: Plugin {
 
   @objc public func get_safe_area_insets(_ invoke: Invoke) {
     DispatchQueue.main.async {
-      if let window = UIApplication.shared.windows.first {
+      // `UIApplication.shared.windows.first` is not the key window once the
+      // app has more than one scene (iPad). That window's insets are 0, which
+      // parked the back and home controls under the status-bar clock.
+      let sceneWindows = UIApplication.shared.connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+        .flatMap { $0.windows }
+      let window = sceneWindows.first(where: { $0.isKeyWindow }) ?? sceneWindows.first
+      if let window = window {
         let insets = window.safeAreaInsets
         invoke.resolve([
           "top": insets.top,

@@ -6,6 +6,17 @@ import { Insets } from '@/types/misc';
 import { getSafeAreaInsets } from '@/utils/bridge';
 import { getOSPlatform } from '@/utils/misc';
 
+// iPadOS sends a Mac user agent, and the webview is drawn under the status
+// bar. When the native inset comes back as 0, use the CSS env() value, then
+// the 24pt status-bar height, so back and home controls clear the clock.
+const ipadStatusBarInset = () => {
+  const cssTop =
+    parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top'),
+    ) || 0;
+  return cssTop || 24;
+};
+
 export const useSafeAreaInsets = () => {
   const { appService } = useEnv();
   const currentInsets = useRef({ top: 0, right: 0, bottom: 0, left: 0 });
@@ -35,25 +46,31 @@ export const useSafeAreaInsets = () => {
 
     const rootStyles = getComputedStyle(document.documentElement);
     const hasCustomProperties = rootStyles.getPropertyValue('--safe-area-inset-top');
-    if (appService.isIOSApp && getOSPlatform() === 'macos') {
-      // for iPadOS use zero insets
-      updateInsets({ top: 0, right: 0, bottom: 0, left: 0 });
-    } else if (appService.isAndroidApp || appService.isIOSApp) {
+    if (appService.isAndroidApp || appService.isIOSApp) {
       // safe-area-inset-* values in css are always 0px in some versions of webview 139
       // due to https://issues.chromium.org/issues/40699457
       getSafeAreaInsets().then((response) => {
         if (response.error) {
           console.error('Error getting safe area insets from native bridge:', response.error);
-        } else {
-          const insets = {
-            top: Math.round(response.top),
-            right: Math.round(response.right),
-            bottom: Math.round(response.bottom),
-            left: Math.round(response.left),
-          };
-          updateInsets(insets);
-          updateScreenCornerRadius(Math.round(response.bottomCornerRadius ?? 0));
+          // iPad still needs a top inset when the bridge fails, or the clock
+          // covers the back and home controls.
+          if (appService.isIOSApp && getOSPlatform() === 'macos') {
+            updateInsets({ top: ipadStatusBarInset(), right: 0, bottom: 0, left: 0 });
+          }
+          return;
         }
+        let top = Math.round(response.top);
+        if (top === 0 && appService.isIOSApp && getOSPlatform() === 'macos') {
+          top = ipadStatusBarInset();
+        }
+        const insets = {
+          top,
+          right: Math.round(response.right),
+          bottom: Math.round(response.bottom),
+          left: Math.round(response.left),
+        };
+        updateInsets(insets);
+        updateScreenCornerRadius(Math.round(response.bottomCornerRadius ?? 0));
       });
     } else if (hasCustomProperties) {
       const top = parseFloat(rootStyles.getPropertyValue('--safe-area-inset-top')) || 0;
