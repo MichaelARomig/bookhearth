@@ -148,6 +148,11 @@ PY
 # script still reported success from a two-month-old archive). Deleting the
 # archive first means a failed build leaves nothing for that check to find.
 rm -rf "$GEN/build/Readest_iOS.xcarchive"
+# Cargo watches the frontend directory's own timestamp, not overwritten
+# files under out/_next. A TypeScript-only change then ships inside an
+# iOS binary that still contains the previous JavaScript. Touch the crate
+# so this build re-embeds out/.
+touch "$APP_DIR/src-tauri/src/lib.rs"
 echo "==> building (first run compiles the whole Rust-for-device tree; ~15-40 min)"
 ( cd "$APP_DIR" && pnpm exec tauri ios build --target aarch64 --ci ) || true
 

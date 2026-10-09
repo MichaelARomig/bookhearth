@@ -134,8 +134,14 @@ const CachedImageComponent = ({
     );
   }
 
+  const onError = () => {
+    setError(new Error('Failed to load image'));
+  };
+
   if (fill) {
-    return <Image src={cachedUrl} alt={alt} fill className={className} sizes={sizes} />;
+    return (
+      <Image src={cachedUrl} alt={alt} fill className={className} sizes={sizes} onError={onError} />
+    );
   }
 
   return (
@@ -146,6 +152,7 @@ const CachedImageComponent = ({
       height={height}
       className={className}
       sizes={sizes}
+      onError={onError}
     />
   );
 };

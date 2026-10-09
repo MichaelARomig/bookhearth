@@ -16,6 +16,7 @@ vi.mock('@/libs/storage', () => ({
 
 vi.mock('@/app/opds/utils/opdsReq', () => ({
   probeAuth: vi.fn().mockResolvedValue(null),
+  fetchWithAuth: vi.fn(),
   needsProxy: vi.fn(() => false),
   getProxiedURL: vi.fn((url: string) => url),
 }));
@@ -23,12 +24,13 @@ vi.mock('@/app/opds/utils/opdsReq', () => ({
 import { md5 } from 'js-md5';
 import {
   applyOPDSCover,
+  fetchOPDSImageObjectUrl,
   getOPDSCoverHref,
   getOPDSImageCacheFilename,
   opdsImageNeedsNativeFetch,
 } from '@/services/opds/cover';
 import { downloadFile } from '@/libs/storage';
-import { probeAuth, getProxiedURL, needsProxy } from '@/app/opds/utils/opdsReq';
+import { fetchWithAuth, probeAuth, getProxiedURL, needsProxy } from '@/app/opds/utils/opdsReq';
 
 const createMockAppService = (coverBytes = new Uint8Array([1, 2, 3]).buffer) =>
   ({
@@ -182,6 +184,54 @@ describe('applyOPDSCover', () => {
     expect(applied).toBe(false);
     expect(appService.writeFile).not.toHaveBeenCalled();
     expect(book.coverHash).toBe('embedded-cover-hash');
+  });
+});
+
+describe('fetchOPDSImageObjectUrl', () => {
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0x00]);
+
+  beforeEach(() => {
+    vi.mocked(fetchWithAuth).mockReset();
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:cover');
+  });
+
+  it('loads a Calibre JPEG through the catalog client and returns a blob URL', async () => {
+    vi.mocked(fetchWithAuth).mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'image/jpeg' },
+      arrayBuffer: async () => jpeg.buffer,
+    } as unknown as Response);
+
+    const url = await fetchOPDSImageObjectUrl(
+      'http://192.168.1.20:8080/get/cover/1/Calibre_Library',
+      'qa',
+      'qapass',
+    );
+
+    expect(url).toBe('blob:cover');
+    expect(fetchWithAuth).toHaveBeenCalledWith(
+      'http://192.168.1.20:8080/get/cover/1/Calibre_Library',
+      'qa',
+      'qapass',
+      false,
+      { headers: { Accept: 'image/jpeg, image/png, image/webp, image/gif, image/*' } },
+      {},
+    );
+    expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+  });
+
+  it('rejects a non-image body instead of painting it as a cover', async () => {
+    vi.mocked(fetchWithAuth).mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'text/html' },
+      arrayBuffer: async () => new TextEncoder().encode('<html>login</html>').buffer,
+    } as unknown as Response);
+
+    await expect(fetchOPDSImageObjectUrl('http://host/get/cover/1')).rejects.toThrow(
+      'not an image',
+    );
   });
 });
 

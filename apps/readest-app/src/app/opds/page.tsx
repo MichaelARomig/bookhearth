@@ -50,6 +50,7 @@ import { READEST_OPDS_USER_AGENT } from '@/services/constants';
 import { findBookByOPDSSources, upsertOPDSSourceMapping } from '@/services/opds/sourceMap';
 import {
   applyOPDSCover,
+  fetchOPDSImageObjectUrl,
   getOPDSCoverHref,
   getOPDSImageCacheFilename,
   opdsImageNeedsNativeFetch,
@@ -890,15 +891,15 @@ export default function BrowserPage() {
       const username = usernameRef.current || '';
       const password = passwordRef.current || '';
       const customHeaders = customHeadersRef.current;
-      // No credentials: the webview can load the image itself, except cleartext
-      // http on the native app. iPad's webview refuses those (no ATS exception),
-      // which is why a Calibre shelf shows titles and no covers.
-      if (
-        !username &&
-        !password &&
-        Object.keys(customHeaders).length === 0 &&
-        !opdsImageNeedsNativeFetch(url, isTauriAppPlatform())
-      ) {
+      // Cleartext Calibre covers never go to the webview. WKWebView blocks
+      // the http URL, and the previously cached asset file still did not
+      // paint on iPad. Fetch the bytes the way the catalog feed is fetched
+      // (that path already speaks Digest) and show a blob.
+      if (opdsImageNeedsNativeFetch(url, isTauriAppPlatform())) {
+        return fetchOPDSImageObjectUrl(url, username, password, customHeaders);
+      }
+      // No credentials: the webview can load an https image itself.
+      if (!username && !password && Object.keys(customHeaders).length === 0) {
         return needsProxy(url) ? getProxiedURL(url, '', true) : url;
       }
 

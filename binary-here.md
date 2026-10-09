@@ -8,9 +8,9 @@ apps/readest-app/src-tauri/gen/apple/build/Bookhearth-unsigned.ipa
 
 | | |
 |---|---|
-| Built | 2026-10-08 16:59 CDT |
+| Built | 2026-10-08 17:21 CDT |
 | App version | 0.12.10 |
-| Source commit | `e633af8d1 + uncommitted changes` |
+| Source commit | `1006fd91c + uncommitted changes` |
 | Size | ~31 MB |
 | Free-team install expires | ~2026-10-15 (7 days after install) |
 

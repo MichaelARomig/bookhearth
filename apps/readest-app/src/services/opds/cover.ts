@@ -4,7 +4,7 @@ import type { AppService } from '@/types/system';
 import type { OPDSGenericLink } from '@/types/opds';
 import { REL } from '@/types/opds';
 import { downloadFile } from '@/libs/storage';
-import { getProxiedURL, needsProxy, probeAuth } from '@/app/opds/utils/opdsReq';
+import { fetchWithAuth, getProxiedURL, needsProxy, probeAuth } from '@/app/opds/utils/opdsReq';
 import { READEST_OPDS_USER_AGENT } from '@/services/constants';
 import { getCoverFilename } from '@/utils/book';
 import { uniqueId } from '@/utils/misc';
@@ -71,6 +71,79 @@ export const opdsImageNeedsNativeFetch = (url: string, tauriApp: boolean): boole
   } catch {
     return false;
   }
+};
+
+const declaredImageType = (header: string | null): string | null => {
+  const declared = header?.split(';')[0]?.trim().toLowerCase() ?? '';
+  return declared.startsWith('image/') ? declared : null;
+};
+
+// Content-Type is missing or a lie often enough (a proxy, a Digest challenge
+// page) that the JPEG/PNG/GIF/WebP signature is the backup.
+const sniffedImageType = (bytes: Uint8Array): string | null => {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return 'image/png';
+  }
+  if (bytes.length >= 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+    return 'image/gif';
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46
+  ) {
+    return 'image/webp';
+  }
+  return null;
+};
+
+/**
+ * Download an OPDS cover with the same client that loads the catalog and
+ * return a blob URL the webview can paint.
+ *
+ * Giving WKWebView the raw `http://` URL fails: the iOS build has no App
+ * Transport Security exception. Saving the file and pointing `<img>` at the
+ * asset URL also produced no covers on device. A blob is created here, so
+ * the webview never requests the Calibre host itself. `fetchWithAuth`
+ * negotiates Digest, which is Calibre's default when a password is required
+ * over plain HTTP; the file-download path only sends Basic and Calibre
+ * rejects that with HTTP 400.
+ */
+export const fetchOPDSImageObjectUrl = async (
+  url: string,
+  username = '',
+  password = '',
+  customHeaders: Record<string, string> = {},
+): Promise<string> => {
+  const useProxy = needsProxy(url);
+  const response = await fetchWithAuth(
+    url,
+    username,
+    password,
+    useProxy,
+    { headers: { Accept: 'image/jpeg, image/png, image/webp, image/gif, image/*' } },
+    customHeaders,
+  );
+  if (!response.ok) {
+    throw new Error(`Cover request failed (${response.status})`);
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const type = declaredImageType(response.headers.get('content-type')) ?? sniffedImageType(bytes);
+  if (!bytes.byteLength || !type) {
+    throw new Error('Cover response was not an image');
+  }
+  return URL.createObjectURL(new Blob([bytes], { type }));
 };
 
 interface ApplyOPDSCoverParams {
